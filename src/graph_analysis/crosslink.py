@@ -5,6 +5,7 @@ chains (crosslinker-to-chain-end).
 
 from __future__ import annotations
 
+import itertools
 import logging
 import multiprocessing as mp
 import pickle
@@ -120,18 +121,35 @@ class CrosslinkPathAnalyzer:
     def _crosslink_matrix(
         self, source_nodes: list[int], dest_nodes: list[int], cache_file: Path
     ) -> set[tuple[int, int]]:
-        """The search space: (source, dest) node pairs to find paths between."""
+        """The search space: (source, dest) node pairs to find paths between.
+
+        When the source and dest pools are the same nodes (crosslinker-to-
+        crosslinker), each unordered pair is generated exactly once via
+        `itertools.combinations` - equivalent to the general cross-product-
+        then-dedup below, but without ever forming the full `|source| x
+        |dest|` product (quadratic in the crosslinker count, which for a
+        densely crosslinked network can be tens of millions of pairs before
+        dedup even runs). Sorting `source_nodes` first ensures each pair
+        still comes out (min, max) - matching the general branch's
+        `tuple(sorted(...))` convention - since when two crosslinkers have
+        more than one equally-short path between them, which one is found
+        first depends on which side of the pair is passed as the search's
+        "source" vs. "target".
+        """
         if cache_file.exists():
             with cache_file.open("rb") as inp:
                 return pickle.load(inp)
 
         keep_neighbours = self.action.keep_neighbours
-        matrix = {
-            tuple(sorted((int(s), int(d))))
-            for s in source_nodes
-            for d in dest_nodes
-            if keep_neighbours or s != d
-        }
+        if not keep_neighbours and source_nodes == dest_nodes:
+            matrix = set(itertools.combinations(sorted(map(int, source_nodes)), 2))
+        else:
+            matrix = {
+                tuple(sorted((int(s), int(d))))
+                for s in source_nodes
+                for d in dest_nodes
+                if keep_neighbours or s != d
+            }
         with cache_file.open("wb") as out:
             pickle.dump(matrix, out)
         return matrix
@@ -147,15 +165,20 @@ class CrosslinkPathAnalyzer:
         logger.info("Number of workers: %d, chunk_size: %d", num_workers, chunk_size)
 
         start = time.time()
+        # Extend a single flat list as results arrive, rather than collecting
+        # one (mostly-empty) list per pair and flattening at the end: for a
+        # densely crosslinked network the pair count can be tens of millions,
+        # and holding a separate result object per pair (plus a second,
+        # flattened copy) is the dominant memory cost.
+        all_paths: list[list[int]] = []
         with mp.Pool(num_workers, _init_worker, (subgraph_cache, ignored_cache)) as pool:
-            results = list(
-                tqdm.tqdm(
-                    pool.imap(_all_shortest_paths, crosslink_matrix, chunksize=chunk_size),
-                    total=len(crosslink_matrix),
-                )
-            )
+            for paths in tqdm.tqdm(
+                pool.imap(_all_shortest_paths, crosslink_matrix, chunksize=chunk_size),
+                total=len(crosslink_matrix),
+            ):
+                all_paths.extend(paths)
         logger.info("Total time %.2fs", time.time() - start)
-        return [path for paths in results for path in paths]
+        return all_paths
 
 
 # --- multiprocessing worker internals ---------------------------------------
