@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "graph-analysis"
+version = "0.2.0"
+description = "Topology analysis pipeline for crosslinked polymer networks"
+requires-python = ">=3.10"
+dependencies = [
+    "networkx>=3.0",
+    "numpy",
+    "igraph",
+    "tqdm",
+]
+
+[project.scripts]
+graph-analysis = "graph_analysis.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
