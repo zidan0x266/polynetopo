@@ -30,14 +30,27 @@ logging.basicConfig(
 logger = logging.getLogger("graph_analysis")
 
 
+_TOPOLOGY_LOADERS = {
+    "lammps": PolymerNetwork.from_lammps,
+    "bond-list": PolymerNetwork.from_bond_list,
+    "rmc": PolymerNetwork.from_rmc,
+}
+
+
 def _load_network(args: argparse.Namespace) -> PolymerNetwork:
-    network = (
-        PolymerNetwork.from_rmc(args.input_file)
-        if args.topology == "rmc"
-        else PolymerNetwork.from_lammps(args.input_file)
-    )
+    network = _TOPOLOGY_LOADERS[args.topology](args.input_file)
     logger.info("Loaded %s", network)
     return network
+
+
+def _add_topology_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--topology",
+        choices=list(_TOPOLOGY_LOADERS),
+        default="lammps",
+        help="Topology file format: a full LAMMPS data file (default), a "
+        "pre-trimmed bare bond list, or an RMC-style edge list",
+    )
 
 
 def _raw_output_path(output_file: str) -> Path:
@@ -91,7 +104,8 @@ def _distances(args: argparse.Namespace) -> None:
 
 
 def _loops(args: argparse.Namespace) -> None:
-    analyzer = LoopAnalyzer.from_lammps(args.input_file, args.nvertices)
+    network = _load_network(args)
+    analyzer = LoopAnalyzer.from_polymer_network(network, args.nvertices)
     logger.info(
         "Graph has %d nodes and %d edges", analyzer.graph.vcount(), analyzer.graph.ecount()
     )
@@ -103,7 +117,7 @@ def _loops(args: argparse.Namespace) -> None:
 
 
 def _scanlan_case(args: argparse.Namespace) -> None:
-    network = PolymerNetwork.from_lammps(args.input_file)
+    network = _load_network(args)
 
     with open(args.strands_file, "rb") as inp:
         strands = pickle.load(inp)
@@ -153,7 +167,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     analyze.add_argument("--ncpus", type=int, default=None)
     analyze.add_argument("--max-chunk-size", type=int, default=None)
-    analyze.add_argument("--topology", choices=["rmc", "lmp"], default="lmp", help="Topology file format")
+    _add_topology_argument(analyze)
     analyze.set_defaults(func=_analyze)
 
     distances = subparsers.add_parser(
@@ -164,11 +178,11 @@ def build_parser() -> argparse.ArgumentParser:
     distances.add_argument("--output-file", required=True, help="Where to write the pickled path list")
     distances.add_argument("--ncpus", type=int, default=None)
     distances.add_argument("--max-chunk-size", type=int, default=None)
-    distances.add_argument("--topology", choices=["rmc", "lmp"], default="lmp", help="Topology file format")
+    _add_topology_argument(distances)
     distances.add_argument("--action", choices=[a.value for a in CrosslinkAction], required=True)
     distances.set_defaults(func=_distances)
 
-    loops = subparsers.add_parser("loops", help="Minimum cycle basis loop detection (LAMMPS format)")
+    loops = subparsers.add_parser("loops", help="Minimum cycle basis loop detection")
     loops.add_argument("--input-file", required=True)
     loops.add_argument("--output-file", required=True)
     loops.add_argument(
@@ -177,16 +191,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Number of nodes in the system; inferred from the topology if omitted",
     )
+    _add_topology_argument(loops)
     loops.set_defaults(func=_loops)
 
     scanlan_case = subparsers.add_parser(
-        "scanlan-case", help="Scanlan-Case crosslinker density refinement (LAMMPS format)"
+        "scanlan-case", help="Scanlan-Case crosslinker density refinement"
     )
     scanlan_case.add_argument("--input-file", required=True, help="Topology edge-list file")
     scanlan_case.add_argument("--strands-file", required=True, help="Pickled strands, from `distances --action crosslinkers`")
     scanlan_case.add_argument("--danglings-file", required=True, help="Pickled danglings, from `distances --action danglings`")
     scanlan_case.add_argument("--loops-file", required=True, help="Pickled loop basis, from `loops`")
     scanlan_case.add_argument("--output-file", required=True)
+    _add_topology_argument(scanlan_case)
     scanlan_case.add_argument(
         "--raw",
         action="store_true",

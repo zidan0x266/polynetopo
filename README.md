@@ -10,9 +10,8 @@ this README.
 
 ## What it does
 
-Given a polymer network topology (a bond/edge list - from a LAMMPS bond table, an
-RMC-style edge list, or a reactive Monte Carlo output converted to one of those), this
-package identifies:
+Given a polymer network topology - a full LAMMPS data file by default, or a legacy
+pre-trimmed bond table / RMC-style edge list - this package identifies:
 
 - **Elastically effective strands** - the shortest simple paths between crosslinkers
   (nodes of degree >= 3).
@@ -40,9 +39,14 @@ Run the whole pipeline - strands, danglings, loops, and their Scanlan-Case refin
 from a single topology load, with no intermediate files:
 
 ```bash
-python3 src/main.py analyze --input-file examples/atrp/edges_0.bds \
+python3 src/main.py analyze --input-file examples/shortest_path/atrp_s3_sys3_0.data \
     --output-file results.pkl --raw --ncpus 4 --max-chunk-size 10000
 ```
+
+`--input-file` here is a full LAMMPS data file (`write_data` output) - the default,
+primary topology format (`--topology lammps`); only its Bonds section is read. A
+pre-trimmed bare bond table is also supported as a legacy format (`--topology
+bond-list`), e.g. `examples/atrp/edges_0.bds`.
 
 This writes `results.pkl` (a `graph_analysis.RefinedStats`: the refined
 strands/danglings/loops plus the crosslinker density they produced) and, since `--raw`
@@ -54,7 +58,7 @@ As a library:
 ```python
 from graph_analysis import PolymerNetwork, NetworkAnalysisPipeline, PipelineConfig
 
-network = PolymerNetwork.from_lammps("edges_0.bds")
+network = PolymerNetwork.from_lammps("atrp_s3_sys3_0.data")  # a full LAMMPS data file
 pipeline = NetworkAnalysisPipeline(network, PipelineConfig(sys_name="run1", ncpus=4))
 result = pipeline.run()  # a ScanlanCaseResult: result.refined, result.raw
 ```
@@ -67,7 +71,7 @@ inspecting an intermediate stage or resuming after a crash) and the complete pub
 
 ```
 src/graph_analysis/
-    network.py       PolymerNetwork - loads a topology (RMC or LAMMPS format)
+    network.py       PolymerNetwork - loads a topology (LAMMPS data file, or legacy formats)
     crosslink.py      CrosslinkPathAnalyzer - shortest simple paths between crosslinkers
     loops.py          LoopAnalyzer - minimum cycle basis loop detection
     scanlan_case.py   ScanlanCaseAnalyzer - crosslinker density refinement
@@ -82,12 +86,15 @@ from the topology file) are guaranteed consistent across strands, danglings, and
 and a loop's member atoms can be cross-referenced against strand/dangling endpoints
 directly by ID.
 
-## Example dataset
+## Example datasets
 
-`examples/atrp/` contains one worked example: an ATRP-synthesized network
-(`edges_0.bds`, a LAMMPS bond table, 103,149 atoms after removing unreacted monomer at
-96% conversion) and its analysis outputs (`strands.pkl`, `danglings.pkl`, `igloops.pkl`,
-`Scanlan_Case.pkl`), reproducible with the commands in `src/README.md`.
+- `examples/atrp/` - an ATRP-synthesized network (`edges_0.bds`, a legacy pre-trimmed
+  bond table, 103,149 atoms after removing unreacted monomer at 96% conversion) and its
+  analysis outputs (`strands.pkl`, `danglings.pkl`, `igloops.pkl`, `Scanlan_Case.pkl`).
+- `examples/shortest_path/` - a denser network (`atrp_s3_sys3_0.data`, a full LAMMPS
+  data file, 104,704 atoms, 9,537 crosslinkers) with the same set of analysis outputs.
+
+Both reproducible with the commands in `src/README.md`.
 
 ## Reproducibility notes
 
