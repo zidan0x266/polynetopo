@@ -5,3 +5,6 @@ cache-*/
 *.egg-info/
 build/
 dist/
+vendor/.spatial-venv/
+vendor/.spatial-build/
+vendor/build_spatial.log

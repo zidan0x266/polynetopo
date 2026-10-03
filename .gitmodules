@@ -1,0 +1,8 @@
+[submodule "vendor/igraph"]
+	path = vendor/igraph
+	url = https://github.com/zidan0x266/igraph.git
+	branch = spatial-betweenness-1.0.0
+[submodule "vendor/python-igraph"]
+	path = vendor/python-igraph
+	url = https://github.com/zidan0x266/python-igraph.git
+	branch = spatial-betweenness-1.0.0

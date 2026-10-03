@@ -31,7 +31,7 @@ truth in this folder.
 ## 3. Run loop detection (the step that failed locally)
 
 ```bash
-python3 src/main.py loops \
+python3 src/main.py --function topology --stage loops \
     --input-file examples/shortest_path/atrp_s3_sys3_0.data \
     --output-file igloops_new.pkl
 ```
@@ -51,7 +51,7 @@ python3 src/main.py loops \
 ## 4. Run Scanlan-Case refinement
 
 ```bash
-python3 src/main.py scanlan-case \
+python3 src/main.py --function topology --stage scanlan-case \
     --input-file examples/shortest_path/atrp_s3_sys3_0.data \
     --strands-file examples/shortest_path/strands.pkl \
     --danglings-file examples/shortest_path/danglings.pkl \
@@ -87,7 +87,7 @@ Since this machine has plenty of memory, running the whole pipeline fresh in one
 is a good independent check that doesn't reuse anything computed earlier:
 
 ```bash
-python3 src/main.py analyze \
+python3 src/main.py --function topology \
     --input-file examples/shortest_path/atrp_s3_sys3_0.data \
     --output-file results_new.pkl --raw --ncpus <N> --max-chunk-size 10000
 
