@@ -179,17 +179,17 @@ def _betweenness(args: argparse.Namespace) -> None:
         print(json.dumps(analysis.inspect(), indent=2, allow_nan=False))
         return
 
-    suffix = f".{config.direction.name.lower()}.spatial.npz"
+    suffix = f".{config.direction.name.lower()}.spatial.pkl"
     if args.sample_vertices is not None:
         suffix = f".sample{args.sample_vertices}" + suffix
     output = (
         Path(args.output_file) if args.output_file else Path(args.input_file).with_suffix(suffix)
     ).expanduser().resolve()
-    if output.suffix != ".npz":
-        raise ValueError("Output filename must end in .npz")
-    if analysis.network.source in (output, output.with_suffix(".json")):
-        raise ValueError("Output files must not replace the input LAMMPS file")
-    if not args.overwrite and (output.exists() or output.with_suffix(".json").exists()):
+    if output.suffix != ".pkl":
+        raise ValueError("Output filename must end in .pkl")
+    if analysis.network.source == output:
+        raise ValueError("Output file must not replace the input LAMMPS file")
+    if not args.overwrite and output.exists():
         raise FileExistsError(f"Output already exists; use --overwrite or --output-file: {output}")
 
     if not args.quiet:
@@ -200,8 +200,8 @@ def _betweenness(args: argparse.Namespace) -> None:
         if not args.quiet:
             ig.set_progress_handler(None)
 
-    archive, report = result.save(output, overwrite=args.overwrite)
-    print(json.dumps({**result.summary(), "output": str(archive), "report": str(report)}, indent=2, allow_nan=False))
+    archive = result.save(output, overwrite=args.overwrite)
+    print(json.dumps({**result.summary(), "output": str(archive)}, indent=2, allow_nan=False))
 
 
 # --- compare -------------------------------------------------------------------

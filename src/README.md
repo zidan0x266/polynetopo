@@ -111,13 +111,28 @@ build's own Python, not your regular environment's:
   this selects a divisor for the *postprocessed* `DBC` output only. Without it, `DBC`
   carries only pair normalization. Apply any length later via
   `CentralityResult.dbc_for_length(L)` without recomputing.
-- `--output-file` (default `<input>.<axis>.spatial.npz`) and a matching `.json`
-  report; `--overwrite` to replace existing output, `--quiet` to suppress progress.
+- `--output-file` (default `<input>.<axis>.spatial.pkl`); `--overwrite` to replace
+  existing output, `--quiet` to suppress progress.
 
-Output arrays (`bond_ids`, `edges`, `raw_GEBC_igraph`, `raw_OBC`, `raw_DBC`, `OBC`,
-`DBC`, ...) are index-aligned with the input's bond rows - see
-`../vendor/python-igraph/analysis/README.md` for the full output/scientific-convention
-reference and the extensive validation already recorded there.
+The output is a pickled `graph_analysis.betweenness.CentralityResult` - the same
+"plain pickle of a dataclass" convention as every other output in this package
+(`ScanlanCaseResult`, `NetworkStats`, ...), not a NumPy `.npz` archive:
+
+```python
+import pickle
+with open("atrp_s1_sys1_0.x.spatial.pkl", "rb") as f:
+    result = pickle.load(f)  # needs graph_analysis importable, e.g. pip install -e .
+bond_ids = result.network.bond_ids       # aligned with every array below
+raw_gebc, raw_obc, raw_dbc = result.raw_gebc, result.raw_obc, result.raw_dbc
+obc, dbc = result.obc, result.dbc        # pair-normalized properties, not stored separately
+```
+
+See `../vendor/python-igraph/analysis/README.md` for the full scientific-convention
+reference (that document's own examples still show its original NumPy-archive
+output - the fields it describes carry over directly to this pickle's attributes,
+e.g. its `raw_GEBC_igraph`/`raw_OBC`/`raw_DBC`/`OBC`/`DBC` map to
+`result.raw_gebc`/`raw_obc`/`raw_dbc`/`obc`/`dbc`) and the extensive validation
+already recorded there.
 
 ## As a library
 

@@ -166,36 +166,48 @@ graph, not an estimate of the full network).
 
 ### 5. Read the output correctly - raw DBC has no automatic length division
 
+Output is a pickled `CentralityResult` - a plain pickle of a dataclass, like every
+other output in this package, not a NumPy archive:
+
 ```python
-import numpy as np
-with np.load("examples/betweenness/atrp_s1_sys1_0.x.spatial.npz") as data:
-    raw_gebc, raw_obc, raw_dbc = data["raw_GEBC_igraph"], data["raw_OBC"], data["raw_DBC"]
-    obc, dbc = data["OBC"], data["DBC"]  # pair-normalized; DBC also length-divided IF --dbc-length was passed
+import pickle
+with open("examples/betweenness/atrp_s1_sys1_0.x.spatial.pkl", "rb") as f:
+    result = pickle.load(f)  # needs graph_analysis importable, e.g. pip install -e .
+raw_gebc, raw_obc, raw_dbc = result.raw_gebc, result.raw_obc, result.raw_dbc
+obc, dbc = result.obc, result.dbc  # pair-normalized properties; dbc also length-divided IF --dbc-length was passed
 ```
 
-`raw_DBC` is **always** the distance-only sum (no `Lx`/bond-length denominator) -
+`raw_dbc` is **always** the distance-only sum (no `Lx`/bond-length denominator) -
 apply any reference length yourself, as many times as you like, without recomputing:
 `result.dbc_for_length(L)` or `result.dbc_for_length(L, normalized=True)`. Passing
-`--dbc-length L` at the CLI only changes the *postprocessed* `DBC` array in the saved
-file; `raw_DBC` is unaffected either way. See
-`vendor/python-igraph/analysis/README.md` for the full convention reference
-(normalization factors, what each output array indexes, migration notes for files
-saved before this convention).
+`--dbc-length L` at the CLI only changes the *postprocessed* `dbc` property; `raw_dbc`
+is unaffected either way. See `vendor/python-igraph/analysis/README.md` for the full
+convention reference (normalization factors, what each field indexes, migration notes
+for files saved before this convention) - written against that package's original
+NumPy-archive field names, which map directly onto this pickle's attributes (e.g.
+`raw_GEBC_igraph`/`OBC`/`DBC` there are `result.raw_gebc`/`obc`/`dbc` here).
 
 ## Example and test datasets
 
-- `examples/atrp/` - an ATRP-synthesized network (`edges_0.bds`, a legacy pre-trimmed
-  bond table, 103,149 atoms after removing unreacted monomer at 96% conversion) and its
-  topology analysis outputs (`strands.pkl`, `danglings.pkl`, `igloops.pkl`,
-  `Scanlan_Case.pkl`).
-- `examples/shortest_path/` - a denser network (`atrp_s3_sys3_0.data`, a full LAMMPS
-  data file, 104,704 atoms, 9,537 crosslinkers) with the same set of topology outputs.
-- `examples/betweenness/` - the undeformed (`atrp_s1_sys1_0.data`) and a deformed
+Each folder has its own `TUTORIAL.md` - a step-by-step walkthrough of the
+`--function` it's named after, using that folder's data as the worked example.
+
+- [`examples/atrp/`](examples/atrp/TUTORIAL.md) (`--function topology`) - an
+  ATRP-synthesized network (`edges_0.bds`, a legacy pre-trimmed bond table, 103,149
+  atoms after removing unreacted monomer at 96% conversion) and its topology analysis
+  outputs (`strands.pkl`, `danglings.pkl`, `igloops.pkl`, `Scanlan_Case.pkl`). Also
+  the tutorial for the legacy bond-list format.
+- [`examples/shortest_path/`](examples/shortest_path/TUTORIAL.md)
+  (`--function shortest-path`) - a denser network (`atrp_s3_sys3_0.data`, a full
+  LAMMPS data file, 104,704 atoms, 9,537 crosslinkers) with the same set of topology
+  outputs. Also the tutorial for the default full-data-file format.
+- [`examples/betweenness/`](examples/betweenness/TUTORIAL.md)
+  (`--function betweenness`) - the undeformed (`atrp_s1_sys1_0.data`) and a deformed
   (`atrp_s1_sys1_42.data`) state of a 103,149-atom/105,869-bond network, used to
   validate `--function betweenness` against stock GEBC and independent path
   enumeration (see `vendor/python-igraph/SPATIAL_BETWEENNESS.md`).
 
-All reproducible with the commands in `src/README.md`.
+All reproducible with the commands in `src/README.md` or each folder's tutorial.
 
 ## Reproducibility notes
 

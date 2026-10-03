@@ -1,9 +1,9 @@
-"""Centrality results, stock comparisons and portable NumPy output."""
+"""Centrality results, stock comparisons and pickled output."""
 
 from __future__ import annotations
 
-import json
 import os
+import pickle
 import tempfile
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -96,42 +96,31 @@ class CentralityResult:
                       gebc_validation=self.validation.to_dict() if self.validation else None)
         return report
 
-    def save(self, path: str | Path, *, overwrite: bool = False) -> tuple[Path, Path]:
-        """Write a pickle-free NPZ and JSON report, using temporary files before replacement.
+    def save(self, path: str | Path, *, overwrite: bool = False) -> Path:
+        """Pickle this whole result to one file, via a temporary file before replacement.
 
-        ``edges`` indexes ``atom_ids``; ``bond_atom_ids`` stores actual LAMMPS IDs.
-        No extra factor of 1/2 is applied. Existing outputs require overwrite=True.
+        Matches the rest of this package (`ScanlanCaseResult`, `NetworkStats`, ...):
+        one plain pickle of the dataclass, not a NumPy archive plus a side-car report.
+        `result.network` carries `atom_ids`/`edges`/`bond_atom_ids`/box info; `.obc`/
+        `.dbc` are computed properties, not stored separately. Existing output
+        requires overwrite=True.
         """
         output = Path(path).expanduser().resolve()
-        if output.suffix != ".npz":
-            raise ValueError("Output filename must end in .npz")
-        report_path = output.with_suffix(".json")
-        if self.network.source in (output, report_path):
-            raise ValueError("Output files must not replace the input LAMMPS file")
-        if not overwrite and (output.exists() or report_path.exists()):
-            raise FileExistsError(f"Output already exists: {output} or {report_path}")
+        if output.suffix != ".pkl":
+            raise ValueError("Output filename must end in .pkl")
+        if self.network.source == output:
+            raise ValueError("Output file must not replace the input LAMMPS file")
+        if not overwrite and output.exists():
+            raise FileExistsError(f"Output already exists: {output}")
         output.parent.mkdir(parents=True, exist_ok=True)
-        metadata = json.dumps(self.summary(), indent=2, allow_nan=False)
-        temporary: list[Path] = []
+        temporary: Path | None = None
         try:
             with tempfile.NamedTemporaryFile(dir=output.parent, prefix=f".{output.name}.", delete=False) as stream:
-                temporary.append(Path(stream.name))
-                np.savez_compressed(stream, atom_ids=self.network.atom_ids, coords=self.network.coordinates,
-                                    bond_ids=self.network.bond_ids, bond_types=self.network.bond_types,
-                                    edges=self.network.edges, bond_atom_ids=self.network.bond_atom_ids,
-                                    box_bounds=self.network.box_bounds, box_lengths=self.network.box_lengths,
-                                    direction=self.metadata["direction"], neff=self.neff,
-                                    dbc_length=self.metadata["dbc_length"] if self.metadata["dbc_length"] is not None else 1.0,
-                                    dbc_length_applied=self.metadata["dbc_length"] is not None,
-                                    raw_dbc_weight="distance", schema_version=2,
-                                    raw_GEBC_igraph=self.raw_gebc, raw_OBC=self.raw_obc, raw_DBC=self.raw_dbc,
-                                    OBC=self.obc, DBC=self.dbc, metadata=metadata)
-            with tempfile.NamedTemporaryFile(mode="w", encoding="utf-8", dir=output.parent, prefix=f".{report_path.name}.", delete=False) as stream:
-                temporary.append(Path(stream.name))
-                stream.write(metadata + "\n")
-            os.replace(temporary[0], output)
-            os.replace(temporary[1], report_path)
+                temporary = Path(stream.name)
+                pickle.dump(self, stream, protocol=pickle.HIGHEST_PROTOCOL)
+            os.replace(temporary, output)
+            temporary = None
         finally:
-            for path in temporary:
-                path.unlink(missing_ok=True)
-        return output, report_path
+            if temporary is not None:
+                temporary.unlink(missing_ok=True)
+        return output
