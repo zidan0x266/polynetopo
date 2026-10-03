@@ -37,3 +37,7 @@ any other `--function`) from the repo root. See
 scientific conventions (raw DBC is distance-only; apply a reference length
 yourself - see `CentralityResult.dbc_for_length`), and the extensive validation
 already recorded there against stock igraph and independent path enumeration.
+
+Building on an HPC cluster (PBS/SLURM job submission, not just a local build)? See
+[`IMPROV.md`](IMPROV.md) for a step-by-step walkthrough on Argonne LCRC's Improv
+cluster specifically.
