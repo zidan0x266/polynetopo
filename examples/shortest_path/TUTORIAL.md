@@ -21,22 +21,33 @@ against the current code to confirm it still works exactly as shown.
   `CLUSTER_TESTING.md` for that history). Not part of this tutorial; see
   `examples/atrp/TUTORIAL.md` if you want the full `--function topology` walkthrough.
 
-## 1. What `--function shortest-path` computes
+## 1. What `--function shortest-path` computes, and why `--action` is required
 
-Two independent searches, selected by `--action`:
+This is **not** a generic "shortest path between any two nodes you name" tool - there
+is no way to pass arbitrary source/target IDs. It only knows how to run exactly two
+searches, and `--action` is how you pick which one - it isn't optional metadata, it's
+the thing being computed, since it decides which nodes even count as a valid
+source/target:
 
-- `--action crosslinkers`: every shortest simple path between two crosslinkers
-  (degree >= 3) - an *elastically effective strand* if the path doesn't pass through
-  a third crosslinker along the way.
-- `--action danglings`: every shortest simple path from a crosslinker to a free chain
-  end (degree == 1) - a *dangling chain*, a defect that doesn't bear load.
+- `--action crosslinkers`: search between every pair of **crosslinker nodes**
+  (degree >= 3). A path found this way is *called* a strand (one that doesn't pass
+  through a third crosslinker along the way - if it did, that would actually be two
+  strands, so those are excluded).
+- `--action danglings`: search from every **crosslinker node** to every **chain-end
+  node** (degree == 1). A path found this way is *called* a dangling chain - a defect,
+  since one end isn't a load-bearing junction.
 
-Both reuse the same multiprocessing search (`graph_analysis.crosslink`): build the
-candidate pair set once, farm shortest-path search out across `--ncpus` workers, cache
-the pair set under `cache-<sys-name>-*/` so a crash doesn't force recomputing it. This
-output is always raw/unrefined - `--function shortest-path` doesn't know about loops
-or the Scanlan-Case criterion at all; that's a separate function (`--function
-topology`), which uses this same search internally as one of its stages.
+"Strand" and "dangling" aren't a separate concept layered on top of the search -
+they're simply the names for what each action's result *is*, in polymer-network
+terms. There's no third, generic output distinct from these two.
+
+Both actions reuse the same multiprocessing search (`graph_analysis.crosslink`):
+build the candidate pair set once, farm shortest-path search out across `--ncpus`
+workers, cache the pair set under `cache-<sys-name>-*/` so a crash doesn't force
+recomputing it. The output is always raw/unrefined - `--function shortest-path`
+doesn't know about loops or the Scanlan-Case criterion at all; that's a separate
+function (`--function topology`), which uses this same search internally as one of
+its stages.
 
 ## 2. Run both searches
 
@@ -58,14 +69,22 @@ On this network: ~1 minute for strands (4.3M candidate crosslinker pairs - most 
 fast, since a path through a third crosslinker doesn't count); danglings is well under
 a minute (far fewer chain ends than crosslinkers - 335 here, confirmed just now in
 ~43 seconds). Expect 17,934 strands and 335 danglings, matching this folder's shipped
-files exactly:
+files exactly.
+
+### (Optional, unrelated) checking your output against the shipped files
+
+`--function compare` has nothing to do with shortest-path specifically - it's a
+generic utility that prints the entry count of any two pickle files, whatever
+produced them. It's handy here purely as a quick sanity check, not part of the
+shortest-path computation itself:
 
 ```bash
 python3 main.py --function compare --file1 strands.pkl --file2 ../examples/shortest_path/strands.pkl
 python3 main.py --function compare --file1 danglings.pkl --file2 ../examples/shortest_path/danglings.pkl
 ```
 
-`compare` only prints the two counts - confirmed `335 335` for danglings just now.
+Confirmed `335 335` for danglings just now (two equal counts = good sign; it isn't a
+byte-for-byte diff, just entry counts).
 
 ## 3. No `--format` flag needed here - that's the point
 
