@@ -27,9 +27,8 @@ python3 src/main.py --function betweenness \
 
 This parses and validates the file, prints its topology and box as JSON, and computes
 nothing. Expect `"nodes": 103149`, `"edges": 105869`, `"components": 1`, and box lengths of
-49.3969 on each axis. Always look at the box lengths before a run on a new network: a
-deformed network's box is not cubic, and OBC and DBC depend on the actual lengths. The box
-is taken as periodic along all three axes.
+49.3969 on each axis. Always look at the box lengths before a run on a new network, since
+OBC and DBC depend on them. The box is taken as periodic along all three axes.
 
 ## 2. A quick trial
 

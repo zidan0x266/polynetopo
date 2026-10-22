@@ -244,8 +244,7 @@ vendor/.spatial-venv/bin/python src/main.py --function betweenness \
 
 Parses and validates the file, prints its topology/box as JSON, and does no
 centrality calculation. Confirms atom/bond counts and the *actual* box lengths before
-you commit to a multi-minute run - a deformed network's box is not the cubic
-undeformed one, and OBC/DBC depend on it.
+you commit to a multi-minute run - OBC and DBC depend on those lengths.
 
 ### 4. Validate on first use with new data, then drop `--validate-stock` for routine runs
 
