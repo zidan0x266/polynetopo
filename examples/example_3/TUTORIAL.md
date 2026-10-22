@@ -19,8 +19,6 @@ All commands run from the repository root. On a cluster, load the Python module 
   pickle is optional.
 - `run_log.txt` - the log and `/usr/bin/time -v` report of the cluster run that produced
   them.
-- `cluster_reference/` - `summary.txt` and `shortest_path_lengths.csv` from an earlier run of
-  the original code on the same network. The lengths file is byte-identical to the one above.
 
 ## 1. A quick trial
 
@@ -114,8 +112,8 @@ Expected: `3321 155.0`, then the smallest D^g per period
 ## 5. How it was checked
 
 On this network the lengths and the paths, row by row, are identical to those of the original
-code, run with the same buffer image, on the cluster (`cluster_reference/` holds its summary
-and lengths). On random periodic networks, the results equal those of the original code for
+code, run with the same buffer image, on the cluster: the same 3,321 lengths, from 155 to 419.
+On random periodic networks, the results equal those of the original code for
 buffer images 0 to 2, along all three axes, with one and with several workers, and for Case 3.
 
 ## 6. Notes

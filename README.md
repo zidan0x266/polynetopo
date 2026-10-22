@@ -295,7 +295,7 @@ removing unreacted monomer at 96% conversion; the same network as the cluster's
 |---|---|---|
 | [`examples/example_1/`](examples/example_1/TUTORIAL.md) | `topology` | strands, danglings, loops and the Scanlan-Case refinement |
 | [`examples/example_2/`](examples/example_2/TUTORIAL.md) | `betweenness` | GEBC, OBC and DBC of every bond, with the check of the native GEBC against stock igraph |
-| [`examples/example_3/`](examples/example_3/TUTORIAL.md) | `shortest-path` | the shortest paths across the periodic boundary, with the results of the cluster run they were checked against |
+| [`examples/example_3/`](examples/example_3/TUTORIAL.md) | `shortest-path` | the shortest paths across the periodic boundary of the network |
 
 ## Reproducibility notes
 
