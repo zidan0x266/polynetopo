@@ -8,3 +8,6 @@ dist/
 vendor/.spatial-venv/
 vendor/.spatial-build/
 vendor/build_spatial.log
+
+# Reference papers: kept locally, not published
+references/
