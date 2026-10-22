@@ -11,6 +11,12 @@ Public API:
     NetworkAnalysisPipeline - runs all of the above in one pass
 """
 
+# igraph must be imported before numpy/networkx. A build made with a newer compiler than the
+# system's needs the newer libstdc++ and finds it through its own library path; if numpy has
+# already loaded the system copy, importing igraph fails with "GLIBCXX_3.4.32 not found" (seen on
+# a cluster node). Worker processes import this package first, so they get the same order.
+import igraph  # noqa: F401, I001
+
 from .crosslink import CrosslinkAction, CrosslinkPathAnalyzer
 from .loops import LoopAnalyzer, LoopBasis
 from .network import PolymerNetwork
