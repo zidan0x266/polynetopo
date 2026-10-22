@@ -8,7 +8,10 @@ and spatial betweenness; only the betweenness part differs from stock `igraph`).
 strand/dangling search is a single linear-time pass over the network, so it needs no
 multiprocessing and little memory even on large, dense networks.
 
-This code produced the analysis in the three papers cited at the bottom of this README.
+This code produced the analysis in the first three papers cited at the bottom of this
+README. Its shortest-path analysis (`--function shortest-path`) implements the method of
+the fourth, Yu & Jackson, ported from the authors' code
+([TheJacksonLab/shortest_path_thermoset](https://github.com/TheJacksonLab/shortest_path_thermoset)).
 
 ## What it does
 
@@ -258,6 +261,12 @@ If you use this code, please cite:
 > *Macromolecules* **2026**, *59*, 10294-10303.
 > DOI: [10.1021/acs.macromol.6c00974](https://doi.org/10.1021/acs.macromol.6c00974)
 
+If you use `--function shortest-path`, please also cite the method it implements:
+
+> Yu, Z.; Jackson, N. E. Shortest Paths Govern Bond Rupture in Thermoset Networks.
+> *Macromolecules* **2025**.
+> DOI: [10.1021/acs.macromol.4c02438](https://doi.org/10.1021/acs.macromol.4c02438)
+
 ```bibtex
 @article{zhang2025topology,
   title   = {Topology and Mechanical Properties of Polymer Networks Formed under Free Radical and Atom Transfer Radical Polymerizations},
@@ -283,5 +292,13 @@ If you use this code, please cite:
   volume  = {59},
   pages   = {10294--10303},
   doi     = {10.1021/acs.macromol.6c00974}
+}
+
+@article{yu2025shortest,
+  title   = {Shortest Paths Govern Bond Rupture in Thermoset Networks},
+  author  = {Yu, Zheng and Jackson, Nicholas E.},
+  journal = {Macromolecules},
+  year    = {2025},
+  doi     = {10.1021/acs.macromol.4c02438}
 }
 ```

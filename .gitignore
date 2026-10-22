@@ -11,3 +11,6 @@ vendor/build_spatial.log
 
 # Reference papers: kept locally, not published
 references/
+
+# Code and results downloaded from the cluster: kept locally, not published
+dependencies/

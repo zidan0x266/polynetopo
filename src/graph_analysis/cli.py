@@ -3,9 +3,9 @@
 A single `--function` flag selects what to run:
 
     topology       strands, danglings, loops and their Scanlan-Case refinement
-                    (--stage picks full/loops/scanlan-case; default: full)
-    shortest-path  shortest simple paths between crosslinkers, or crosslinker
-                    to chain-end (dangling chains)
+                    (--stage picks full/strands/danglings/loops/scanlan-case; default: full)
+    shortest-path  shortest paths across the periodic boundary (Yu & Jackson 2025),
+                    which govern where and when the first bond breaks
     betweenness    native spatially-weighted edge betweenness (GEBC/OBC/DBC)
     compare        print the entry counts of two pickled result files
 """
@@ -43,21 +43,38 @@ def _load_network(args: argparse.Namespace) -> PolymerNetwork:
     return network
 
 
-def _raw_output_path(output_file: str) -> Path:
-    """`results.pkl` -> `results_raw.pkl`."""
+def _sibling_path(output_file: str, suffix: str) -> Path:
+    """`results.pkl` -> `results_<suffix>.pkl`."""
     path = Path(output_file)
-    return path.with_stem(path.stem + "_raw")
+    return path.with_stem(f"{path.stem}_{suffix}")
 
 
-def _write_result(result: ScanlanCaseResult, output_file: str, write_raw: bool) -> None:
-    with open(output_file, "wb") as out:
-        pickle.dump(result.refined, out)
+def _dump(obj: object, path: Path | str) -> None:
+    with open(path, "wb") as out:
+        pickle.dump(obj, out)
+
+
+def _write_result(
+    result: ScanlanCaseResult, output_file: str, write_raw: bool, write_stage_files: bool = False
+) -> None:
+    _dump(result.refined, output_file)
     logger.info("Wrote refined result to %s", output_file)
 
+    if write_stage_files:
+        # The inputs of `--stage scanlan-case`, so it can be rerun without the slow loop search.
+        raw = result.raw
+        for suffix, content in (
+            ("strands", raw.strands),
+            ("danglings", raw.danglings),
+            ("loops", [raw.loops, raw.loop_orders]),
+        ):
+            stage_file = _sibling_path(output_file, suffix)
+            _dump(content, stage_file)
+            logger.info("Wrote %s to %s", suffix, stage_file)
+
     if write_raw:
-        raw_file = _raw_output_path(output_file)
-        with open(raw_file, "wb") as out:
-            pickle.dump(result.raw, out)
+        raw_file = _sibling_path(output_file, "raw")
+        _dump(result.raw, raw_file)
         logger.info("Wrote raw (pre-refinement) result to %s", raw_file)
 
 
@@ -69,7 +86,23 @@ def _topology_full(args: argparse.Namespace) -> None:
 
     pipeline = NetworkAnalysisPipeline(network=network, n_vertices=args.nvertices)
     result = pipeline.run()
-    _write_result(result, args.output_file, args.raw)
+    _write_result(result, args.output_file, args.raw, write_stage_files=True)
+
+
+def _topology_paths(action: CrosslinkAction):
+    """A stage that writes just one flat list of strand or dangling paths."""
+
+    def stage(args: argparse.Namespace) -> None:
+        network = _load_network(args)
+        paths = CrosslinkPathAnalyzer(action).run(network)
+        _dump(paths, args.output_file)
+        logger.info("Wrote %d %s to %s", len(paths), action.value, args.output_file)
+
+    return stage
+
+
+_topology_strands = _topology_paths(CrosslinkAction.CROSSLINKERS)
+_topology_danglings = _topology_paths(CrosslinkAction.DANGLINGS)
 
 
 def _topology_loops(args: argparse.Namespace) -> None:
@@ -102,6 +135,8 @@ def _topology_scanlan_case(args: argparse.Namespace) -> None:
 
 _TOPOLOGY_STAGES = {
     "full": _topology_full,
+    "strands": _topology_strands,
+    "danglings": _topology_danglings,
     "loops": _topology_loops,
     "scanlan-case": _topology_scanlan_case,
 }
@@ -115,13 +150,31 @@ def _topology(args: argparse.Namespace) -> None:
 
 
 def _shortest_path(args: argparse.Namespace) -> None:
-    network = _load_network(args)
+    from .lammps import Direction
+    from .shortest_path import PeriodicShortestPathAnalysis, ShortestPathConfig
 
-    paths = CrosslinkPathAnalyzer(CrosslinkAction(args.action)).run(network)
+    config = ShortestPathConfig(
+        direction=Direction.parse(args.direction),
+        max_period=args.max_period,
+        buffer_images=args.buffer_images,
+        slice_max=args.slice_max,
+        remove_redundant=not args.keep_redundant,
+        min_sp_only=args.min_sp_only,
+        ncpus=args.ncpus,
+        checkpoint_file=args.checkpoint_file,
+    )
+    analysis = PeriodicShortestPathAnalysis.from_lammps(args.input_file, config)
 
-    with open(args.output_file, "wb") as out:
-        pickle.dump(paths, out)
-    logger.info("Wrote %d paths to %s", len(paths), args.output_file)
+    suffix = f".{config.direction.name.lower()}.sp.pkl"
+    output = (
+        Path(args.output_file) if args.output_file else Path(args.input_file).with_suffix(suffix)
+    ).expanduser().resolve()
+    if not args.overwrite and output.exists():
+        raise FileExistsError(f"Output already exists; use --overwrite or --output-file: {output}")
+
+    result = analysis.run()
+    archive = result.save(output, overwrite=args.overwrite)
+    print(json.dumps({**result.summary(), "output": str(archive)}, indent=2, allow_nan=False))
 
 
 # --- betweenness ---------------------------------------------------------------
@@ -145,7 +198,8 @@ def _betweenness(args: argparse.Namespace) -> None:
     # vendor/README.md) only at analysis time, not merely to parse arguments.
     import igraph as ig
 
-    from .betweenness import AnalysisConfig, Direction, SpatialBetweennessAnalysis
+    from .betweenness import AnalysisConfig, SpatialBetweennessAnalysis
+    from .lammps import Direction
 
     if not args.quiet:
         logging.getLogger().setLevel(logging.INFO)
@@ -214,11 +268,13 @@ _DISPATCH = {
 # "topology" and is otherwise ignored.
 _REQUIRED_ARGS = {
     ("topology", "full"): ["input_file", "output_file"],
+    ("topology", "strands"): ["input_file", "output_file"],
+    ("topology", "danglings"): ["input_file", "output_file"],
     ("topology", "loops"): ["input_file", "output_file"],
     ("topology", "scanlan-case"): [
         "input_file", "strands_file", "danglings_file", "loops_file", "output_file",
     ],
-    ("shortest-path", None): ["input_file", "output_file", "action"],
+    ("shortest-path", None): ["input_file"],
     ("betweenness", None): ["input_file"],
     ("compare", None): ["file1", "file2"],
 }
@@ -253,7 +309,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--format",
         choices=list(_FORMAT_LOADERS),
         default="lammps",
-        help="Topology file format for --function topology/shortest-path: a full LAMMPS "
+        help="Topology file format for --function topology: a full LAMMPS "
         "data file (default), a pre-trimmed bare bond list, or an RMC-style edge list",
     )
     common.add_argument(
@@ -267,9 +323,10 @@ def build_parser() -> argparse.ArgumentParser:
         "--stage",
         choices=list(_TOPOLOGY_STAGES),
         default="full",
-        help="full: strands+danglings+loops+Scanlan-Case in one pass (default). "
-        "loops/scanlan-case: just that stage, e.g. to resume after a crash or run "
-        "a memory-heavy stage on a bigger machine separately",
+        help="full (default): strands, danglings, loops and Scanlan-Case in one pass, also "
+        "writing <output>_strands/_danglings/_loops.pkl. strands/danglings/loops/scanlan-case: "
+        "just that stage (scanlan-case needs the three files from the others), e.g. to rerun "
+        "the refinement or run the memory-heavy loop search on a bigger machine separately",
     )
     topology.add_argument(
         "--raw",
@@ -277,17 +334,49 @@ def build_parser() -> argparse.ArgumentParser:
         help="(stage full/scanlan-case) Also write the pre-refinement strands/danglings/loops "
         "to <output>_raw.<ext>",
     )
-    topology.add_argument("--strands-file", help="(stage scanlan-case) Pickled strands, from --function shortest-path --action crosslinkers")
-    topology.add_argument("--danglings-file", help="(stage scanlan-case) Pickled danglings, from --function shortest-path --action danglings")
-    topology.add_argument("--loops-file", help="(stage scanlan-case) Pickled loop basis, from --stage loops")
+    topology.add_argument("--strands-file", help="(stage scanlan-case) Pickled strands, from --stage strands or <output>_strands.pkl")
+    topology.add_argument("--danglings-file", help="(stage scanlan-case) Pickled danglings, from --stage danglings or <output>_danglings.pkl")
+    topology.add_argument("--loops-file", help="(stage scanlan-case) Pickled loop basis, from --stage loops or <output>_loops.pkl")
+
+    common.add_argument(
+        "--direction", default="x", metavar="{x,y,z,0,1,2}",
+        help="(betweenness) loading axis; (shortest-path) periodic axis the paths wrap along (default: x)",
+    )
+    common.add_argument(
+        "--overwrite", action="store_true", help="(betweenness, shortest-path) Replace existing output files"
+    )
 
     shortest_path = parser.add_argument_group("--function shortest-path")
-    shortest_path.add_argument("--action", choices=[a.value for a in CrosslinkAction])
+    shortest_path.add_argument(
+        "--max-period", type=int, default=8, metavar="M",
+        help="The paper's M: search periods p = 1..M, each wrapping p box lengths (default: 8)",
+    )
+    shortest_path.add_argument(
+        "--buffer-images", type=int, default=1,
+        help="Extra periodic images on each side, so paths can leave the stack between their "
+        "ends (default: 1; 0 keeps them inside it)",
+    )
+    shortest_path.add_argument(
+        "--slice-max", type=float, metavar="L",
+        help="Only start paths from atoms within L of the box's low face along --direction "
+        "(default: every atom); reduces cost",
+    )
+    shortest_path.add_argument(
+        "--keep-redundant", action="store_true", help="Skip the removal of redundant paths (Cases 1 and 2)"
+    )
+    shortest_path.add_argument(
+        "--min-sp-only", action="store_true",
+        help="Also apply the paper's optional Case 3: keep only the shortest SP of each start atom",
+    )
+    shortest_path.add_argument(
+        "--ncpus", type=int, default=None, help="Worker processes for the per-atom search (default: 1)"
+    )
+    shortest_path.add_argument(
+        "--checkpoint-file", type=Path,
+        help="Save progress after each period here and resume from it if it exists",
+    )
 
     betweenness = parser.add_argument_group("--function betweenness")
-    betweenness.add_argument(
-        "--direction", default="x", metavar="{x,y,z,0,1,2}", help="Loading axis (default: x)"
-    )
     betweenness.add_argument(
         "--dbc-length", type=float, metavar="L",
         help="Optional length divisor for postprocessed DBC only; raw DBC always uses distance alone",
@@ -301,9 +390,6 @@ def build_parser() -> argparse.ArgumentParser:
     betweenness.add_argument(
         "--sample-vertices", type=int, metavar="N",
         help="Debug only: induced neighborhood, not full-network centrality",
-    )
-    betweenness.add_argument(
-        "--overwrite", action="store_true", help="Replace existing output files"
     )
     betweenness.add_argument("--quiet", action="store_true", help="Suppress progress logging")
 
