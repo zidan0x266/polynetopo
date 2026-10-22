@@ -1,0 +1,65 @@
+2026-10-22 14:54:07,867 - graph_analysis - INFO - Spatial edge betweenness: 0%
+2026-10-22 14:58:47,383 - graph_analysis - INFO - Spatial edge betweenness: 5%
+2026-10-22 15:03:24,086 - graph_analysis - INFO - Spatial edge betweenness: 10%
+2026-10-22 15:07:43,812 - graph_analysis - INFO - Spatial edge betweenness: 15%
+2026-10-22 15:11:16,184 - graph_analysis - INFO - Spatial edge betweenness: 20%
+2026-10-22 15:13:03,371 - graph_analysis - INFO - Spatial edge betweenness: 25%
+2026-10-22 15:14:50,448 - graph_analysis - INFO - Spatial edge betweenness: 30%
+2026-10-22 15:16:37,481 - graph_analysis - INFO - Spatial edge betweenness: 35%
+2026-10-22 15:18:24,426 - graph_analysis - INFO - Spatial edge betweenness: 40%
+2026-10-22 15:20:11,414 - graph_analysis - INFO - Spatial edge betweenness: 45%
+2026-10-22 15:21:58,574 - graph_analysis - INFO - Spatial edge betweenness: 50%
+2026-10-22 15:23:45,675 - graph_analysis - INFO - Spatial edge betweenness: 55%
+2026-10-22 15:25:25,129 - graph_analysis - INFO - Spatial edge betweenness: 60%
+2026-10-22 15:26:54,362 - graph_analysis - INFO - Spatial edge betweenness: 65%
+2026-10-22 15:28:23,624 - graph_analysis - INFO - Spatial edge betweenness: 70%
+2026-10-22 15:29:52,927 - graph_analysis - INFO - Spatial edge betweenness: 75%
+2026-10-22 15:31:22,148 - graph_analysis - INFO - Spatial edge betweenness: 80%
+2026-10-22 15:32:51,379 - graph_analysis - INFO - Spatial edge betweenness: 85%
+2026-10-22 15:34:20,638 - graph_analysis - INFO - Spatial edge betweenness: 90%
+2026-10-22 15:35:49,857 - graph_analysis - INFO - Spatial edge betweenness: 95%
+2026-10-22 15:37:18,913 - graph_analysis - INFO - Spatial edge betweenness: 100%
+2026-10-22 15:37:18,952 - graph_analysis - INFO - Edge betweenness centrality: 0%
+2026-10-22 15:38:26,297 - graph_analysis - INFO - Edge betweenness centrality: 5%
+2026-10-22 15:39:33,583 - graph_analysis - INFO - Edge betweenness centrality: 10%
+2026-10-22 15:40:40,884 - graph_analysis - INFO - Edge betweenness centrality: 15%
+2026-10-22 15:41:48,119 - graph_analysis - INFO - Edge betweenness centrality: 20%
+2026-10-22 15:42:55,400 - graph_analysis - INFO - Edge betweenness centrality: 25%
+2026-10-22 15:44:02,678 - graph_analysis - INFO - Edge betweenness centrality: 30%
+2026-10-22 15:45:09,983 - graph_analysis - INFO - Edge betweenness centrality: 35%
+2026-10-22 15:46:17,274 - graph_analysis - INFO - Edge betweenness centrality: 40%
+2026-10-22 15:47:24,599 - graph_analysis - INFO - Edge betweenness centrality: 45%
+2026-10-22 15:48:31,868 - graph_analysis - INFO - Edge betweenness centrality: 50%
+2026-10-22 15:49:39,135 - graph_analysis - INFO - Edge betweenness centrality: 55%
+2026-10-22 15:50:46,414 - graph_analysis - INFO - Edge betweenness centrality: 60%
+2026-10-22 15:51:53,637 - graph_analysis - INFO - Edge betweenness centrality: 65%
+2026-10-22 15:53:00,900 - graph_analysis - INFO - Edge betweenness centrality: 70%
+2026-10-22 15:54:08,166 - graph_analysis - INFO - Edge betweenness centrality: 75%
+2026-10-22 15:55:15,411 - graph_analysis - INFO - Edge betweenness centrality: 80%
+2026-10-22 15:56:22,630 - graph_analysis - INFO - Edge betweenness centrality: 85%
+2026-10-22 15:57:29,849 - graph_analysis - INFO - Edge betweenness centrality: 90%
+2026-10-22 15:58:37,069 - graph_analysis - INFO - Edge betweenness centrality: 95%
+2026-10-22 15:59:44,178 - graph_analysis - INFO - Edge betweenness centrality: 100%
+	Command being timed: "python3 src/main.py --function betweenness --input-file examples/data/atrp_s1_sys1_0.data --direction x --validate-stock --overwrite --output-file examples/example_2/atrp_s1_sys1_0.x.spatial.pkl"
+	User time (seconds): 3926.91
+	System time (seconds): 0.49
+	Percent of CPU this job got: 99%
+	Elapsed (wall clock) time (h:mm:ss or m:ss): 1:05:38
+	Average shared text size (kbytes): 0
+	Average unshared data size (kbytes): 0
+	Average stack size (kbytes): 0
+	Average total size (kbytes): 0
+	Maximum resident set size (kbytes): 125712
+	Average resident set size (kbytes): 0
+	Major (requiring I/O) page faults: 0
+	Minor (reclaiming a frame) page faults: 227437
+	Voluntary context switches: 1080
+	Involuntary context switches: 2062
+	Swaps: 0
+	File system inputs: 0
+	File system outputs: 0
+	Socket messages sent: 0
+	Socket messages received: 0
+	Signals delivered: 0
+	Page size (bytes): 4096
+	Exit status: 0

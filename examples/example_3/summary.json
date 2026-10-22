@@ -1,0 +1,20 @@
+{
+  "paths": 3321,
+  "direction": "x",
+  "box_length": 49.396946617947506,
+  "max_period": 8,
+  "buffer_images": 1,
+  "min_sp_only": false,
+  "min_length": 155.0,
+  "max_length": 419.0,
+  "mean_length": 218.80391950215798,
+  "median_length": 211.0,
+  "periods_with_paths": [
+    1,
+    2,
+    3,
+    4,
+    5
+  ],
+  "output": "/lcrc/project/nano-soft-assembly/zidan/sp_gebc/atrp_argonne/polynetopo-main/examples/example_3/atrp_s1_sys1_0.x.sp.pkl"
+}

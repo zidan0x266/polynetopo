@@ -1,101 +1,127 @@
-# Tutorial: shortest-path analysis (`--function shortest-path`)
+# Example 3: shortest paths across the periodic boundary (`--function shortest-path`)
 
-Using this folder's denser network as the example. Also the tutorial for the
-**default** full LAMMPS data file format; `examples/atrp/TUTORIAL.md` covers the
-legacy pre-trimmed bond-list format and the full topology pipeline.
+The method of Yu & Jackson, "Shortest Paths Govern Bond Rupture in Thermoset Networks"
+(Macromolecules 2025), run on `examples/data/atrp_s1_sys1_0.data` along x. The README's
+section on this function has the definitions; in short, for each period p = 1..M, every
+atom's shortest path to its own image p box lengths away is found on a graph of p + 1
+periodic images, and its length divided by p is the normalized length D^g (bonds per box
+length). The shortest one predicts where the first bond breaks and, through D^g_min / L0,
+the strain at which it breaks.
 
-All commands assume you're in `src/` (paths are relative to there, matching
-`src/README.md`); adjust if you run from elsewhere. Every command below was run
-against the current code to confirm it still works exactly as shown.
+All commands run from the repository root. On a cluster, load the Python module first
+(see the README's note on import order).
 
-## 0. What's in this folder
+## 0. What's here
 
-- `atrp_s3_sys3_0.data` - the topology: a full LAMMPS data file (`write_data` output),
-  104,704 atoms, 114,029 bonds, 9,537 crosslinkers - denser than `examples/atrp`
-  (2,932 crosslinkers), a good stress test for the strand search.
-- `strands.pkl`, `danglings.pkl` - the expected output of `--function shortest-path`'s
-  two searches, this tutorial's focus.
-- `igloops.pkl`, `Scanlan_Case.pkl` - loops and the Scanlan-Case refinement for this
-  network, from the full topology pipeline. Not part of this tutorial; see
-  `examples/atrp/TUTORIAL.md` if you want the full `--function topology` walkthrough.
+- `atrp_s1_sys1_0.x.sp.pkl` - the result, a pickled `ShortestPathResult` (20 MB).
+- `summary.json` - the numbers the command prints.
+- `shortest_path_lengths.csv` - the 3,321 normalized lengths D^g, one per line, so the large
+  pickle is optional.
+- `run_log.txt` - the log and `/usr/bin/time -v` report of the cluster run that produced
+  them.
+- `cluster_reference/` - `summary.txt` and `shortest_path_lengths.csv` from an earlier run of
+  the original code on the same network. The lengths file is byte-identical to the one above.
 
-## 1. What `--function shortest-path` computes, and why `--action` is required
-
-This is **not** a generic "shortest path between any two nodes you name" tool - there
-is no way to pass arbitrary source/target IDs. It only knows how to run exactly two
-searches, and `--action` is how you pick which one - it isn't optional metadata, it's
-the thing being computed, since it decides which nodes even count as a valid
-source/target:
-
-- `--action crosslinkers`: search between every pair of **crosslinker nodes**
-  (degree >= 3). A path found this way is *called* a strand (one that doesn't pass
-  through a third crosslinker along the way - if it did, that would actually be two
-  strands, so those are excluded).
-- `--action danglings`: search from every **crosslinker node** to every **chain-end
-  node** (degree == 1). A path found this way is *called* a dangling chain - a defect,
-  since one end isn't a load-bearing junction.
-
-"Strand" and "dangling" aren't a separate concept layered on top of the search -
-they're simply the names for what each action's result *is*, in polymer-network
-terms. There's no third, generic output distinct from these two.
-
-Both actions use the same chain walk (`graph_analysis.crosslink`): every strand or
-dangling chain is a run of degree-2 atoms starting at a crosslinker, so the search
-follows each bond leaving a crosslinker until the chain reaches a crosslinker (strand),
-a chain end (dangling), or a dead end. That is one pass over the bonds - no candidate
-pair set, no worker processes, no cache files. The output is always raw/unrefined - `--function shortest-path`
-doesn't know about loops or the Scanlan-Case criterion at all; that's a separate
-function (`--function topology`), which uses this same search internally as one of
-its stages.
-
-## 2. Run both searches
+## 1. A quick trial
 
 ```bash
-# Strands: crosslinker-to-crosslinker
-python3 main.py --function shortest-path \
-    --input-file ../examples/shortest_path/atrp_s3_sys3_0.data \
-    --output-file strands.pkl --action crosslinkers
-
-# Dangling chains: crosslinker-to-chain-end
-python3 main.py --function shortest-path \
-    --input-file ../examples/shortest_path/atrp_s3_sys3_0.data \
-    --output-file danglings.pkl --action danglings
+python3 src/main.py --function shortest-path \
+    --input-file examples/data/atrp_s1_sys1_0.data --direction x \
+    --slice-max 1.0 --max-period 2 --ncpus 4 --output-file trial.sp.pkl
 ```
 
-On this network each search takes a few seconds and about 140 MB of memory (3 s for
-strands, under 1 s for danglings, measured on a laptop). Expect 17,991 strands and 335
-danglings, matching this folder's shipped files exactly. (Earlier releases found
-17,934 strands and missed some parallel chains - see the main README's note on earlier
-strand counts.)
+`--slice-max 1.0` starts paths only from atoms within 1.0 of the box's low face (2,069 of
+103,149 atoms), which makes it a small test and not a result for the network. Expect:
 
-### (Optional, unrelated) checking your output against the shipped files
+```
+period 1: 706 valid paths from 2069 sources
+period 2: 456 valid paths from 2069 sources
+Found 298 shortest paths
+```
 
-`--function compare` has nothing to do with shortest-path specifically - it's a
-generic utility that prints the entry count of any two pickle files, whatever
-produced them. It's handy here purely as a quick sanity check, not part of the
-shortest-path computation itself:
+and in the printed summary `"min_length": 155.0`, `"max_length": 419.0`.
+
+## 2. The full run
 
 ```bash
-python3 main.py --function compare --file1 strands.pkl --file2 ../examples/shortest_path/strands.pkl
-python3 main.py --function compare --file1 danglings.pkl --file2 ../examples/shortest_path/danglings.pkl
+python3 src/main.py --function shortest-path \
+    --input-file examples/data/atrp_s1_sys1_0.data --direction x --ncpus 8 \
+    --output-file atrp_s1_sys1_0.x.sp.pkl
 ```
 
-Expect two equal counts for each (17,991 and 335) - it isn't a byte-for-byte diff,
-just entry counts.
+With the default `--max-period 8` the search stops at period 6, the first with no valid
+path. The log shows how many of the 103,149 atoms found a valid path at each period:
 
-## 3. No `--format` flag needed here - that's the point
+| period p | valid paths | time (34 workers) |
+|---|---|---|
+| 1 | 34,534 | about 1 min |
+| 2 | 22,353 | 2 min 05 s |
+| 3 | 10,535 | 2 min 38 s |
+| 4 | 1,997 | 3 min 09 s |
+| 5 | 66 | 3 min 43 s |
+| 6 | 0 | 4 min 16 s |
 
-Unlike `examples/atrp` (which needs `--format bond-list`), this folder's topology file
-is already the default full LAMMPS data file, so every command above omits
-`--format` entirely. If you only have a bare, pre-trimmed bond table (just
-`bond-id bond-type atom_i atom_j` rows), add `--format bond-list` - see
-`examples/atrp/TUTORIAL.md`.
+Removing redundant paths then leaves **3,321 paths**, and the summary is `"min_length": 155.0`,
+`"max_length": 419.0`, `"mean_length": 218.80`, `"median_length": 211.0`.
 
-## 4. That's the whole function
+| | wall time | peak memory of the largest process |
+|---|---|---|
+| cluster node, 34 workers (`run_log.txt`) | 17 min | 0.79 GB |
+| laptop, 8 workers (earlier version of the code) | 106 min | 5.8 GB |
 
-`strands.pkl`/`danglings.pkl` are the complete output of `--function shortest-path` -
-it doesn't do loop detection or Scanlan-Case refinement, by design (those are a
-different function, `--function topology`, covered in `examples/atrp/TUTORIAL.md`).
-If you want the fully refined result instead of just these two raw searches, run
-`--function topology` directly on `atrp_s3_sys3_0.data` - it performs this same search
-internally as one stage among several.
+Each worker holds one copy of the multi-image graph, so memory grows with `--ncpus` and with
+the number of periods. The time per period grows with p because the paths and graphs do.
+
+## 3. Read the result
+
+```bash
+PYTHONPATH=src python3 - <<'PY'
+import igraph                      # first, see the README
+import pickle
+with open("examples/example_3/atrp_s1_sys1_0.x.sp.pkl", "rb") as f:
+    sp = pickle.load(f)
+print(len(sp.paths), sp.min_length, sp.min_length_by_period.tolist())
+print(sp.paths[0][:3].tolist(), "...", sp.paths[0][-1].tolist())
+PY
+```
+
+Expected: `3321 155.0`, then the smallest D^g per period
+`[[1.0, 155.0], [2.0, 173.0], [3.0, 168.33], [4.0, 172.0], [5.0, 174.0]]`, then
+`[[6, 0], [28, 0], [219, 0]] ... [6, 1]` for the first path.
+
+- `sp.lengths[k]` is the D^g of `sp.paths[k]`.
+- A path is an array of `(atom ID, image)` rows from the atom in image 0 to the same atom in
+  image p. This path starts and ends on atom 6, at image 0 and image 1, and has 346 bonds.
+- Images are counted from image 0, the box as given. An image of -1, or above p, is one of
+  the buffer images a path passed through; here the paths reach images -1 to 5.
+- `sp.min_length_by_period` is computed before redundant paths are removed.
+
+## 4. The options
+
+- `--max-period M` (default 8): periods 1..M. Here nothing is found past period 5, so 8 and 6
+  give the same result.
+- `--buffer-images N` (default 1): extra images on each side of the p + 1, so a path can leave
+  the stack between its ends. `0` keeps it inside, and the paths can differ.
+- `--min-sp-only`: also apply the paper's optional Case 3 and keep only the shortest path of
+  each start atom. The 3,321 paths here start from 2,526 different atoms, so this would keep
+  2,526 of them, with the same minimum of 155.0 (counted by applying the same step to this
+  result, not from a separate run). It is off by default, so an atom can have a path at
+  several periods.
+- `--keep-redundant`: skip the removal of redundant paths (the paper's Cases 1 and 2).
+- `--slice-max L`, `--ncpus N`, `--checkpoint-file F`: start paths from a thin slice, use
+  worker processes, and save progress after each period so an interrupted run resumes.
+
+## 5. How it was checked
+
+On this network the lengths and the paths, row by row, are identical to those of the original
+code, run with the same buffer image, on the cluster (`cluster_reference/` holds its summary
+and lengths). On random periodic networks, the results equal those of the original code for
+buffer images 0 to 2, along all three axes, with one and with several workers, and for Case 3.
+
+## 6. Notes
+
+- The input may not contain an atom pair bonded twice, or an atom bonded to itself: a path
+  lists atoms, so it could not say which of two parallel bonds it used. This raises an error
+  naming the pair. The reaction code that produced this network does not create such bonds.
+- Atom IDs are the raw IDs of the data file.
+- Run `--direction y` and `--direction z` for the other axes; each is a separate run.

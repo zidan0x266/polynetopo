@@ -1,113 +1,137 @@
-# Tutorial: topology analysis (`--function topology`)
+# Example 1: topology analysis (`--function topology`)
 
-Walks through computing elastically effective strands, dangling chains, primary/
-higher-order loops, and Scanlan-Case crosslinker density refinement, using this
-folder's ATRP network as the example. This is also the tutorial for the **legacy**
-pre-trimmed bond-list format - `examples/shortest_path/TUTORIAL.md` uses the default
-full LAMMPS data file format instead.
+Walks through computing elastically effective strands, dangling chains, primary and
+higher-order loops, and the Scanlan-Case crosslinker density refinement, for the ATRP
+network in `examples/data/atrp_s1_sys1_0.data`. The other two examples use the same file.
 
-All commands assume you're in `src/` (paths are relative to there, matching
-`src/README.md`); adjust if you run from elsewhere.
+All commands run from the repository root. Without `pip install -e .`, use
+`python3 src/main.py` as below and put `src` on the path for your own scripts
+(`PYTHONPATH=src`). On a cluster, load the Python module first (see the README's note on
+import order).
 
-## 0. What's in this folder
+## 0. What's here
 
-- `edges_0.bds` - the topology: a bare bond table (`bond-id bond-type atom_i atom_j`
-  per line), 103,149 atoms after removing unreacted monomer at 96% conversion. This
-  is the **legacy** format (`--format bond-list`); it was manually trimmed from a full
-  LAMMPS data file before this package could read one directly.
-- `strands.pkl`, `danglings.pkl`, `igloops.pkl`, `Scanlan_Case.pkl` - the expected
-  output of every command below, already computed - use them to check your own run
-  matches, no need to treat your first run as a leap of faith.
+- `examples/data/atrp_s1_sys1_0.data` - the network: a full LAMMPS data file
+  (`write_data` output), 103,149 atoms and 105,869 bonds, after removing unreacted
+  monomer at 96% conversion. Only its Bonds section is read by `--function topology`.
+- `results.pkl` - the refined result (a `graph_analysis.RefinedStats`).
+- `results_strands.pkl`, `results_danglings.pkl`, `results_loops.pkl` - the three raw
+  stages, written by the same run so the refinement can be redone without the loop search.
+- `run_log.txt` - the log and `/usr/bin/time -v` report of the cluster run that produced
+  these files.
 
-## 1. One-shot: the whole pipeline at once
+## 1. One command
 
 ```bash
-python3 main.py --function topology \
-    --input-file ../examples/atrp/edges_0.bds --format bond-list \
-    --output-file results.pkl --raw
+python3 src/main.py --function topology \
+    --input-file examples/data/atrp_s1_sys1_0.data \
+    --output-file results.pkl
 ```
 
-Strands, danglings, loops and their Scanlan-Case refinement, from one topology load,
-no intermediate files. Strands and danglings take a few seconds on this network
-(one pass over the bonds, see `src/graph_analysis/crosslink.py`); loop detection
-(the minimum cycle basis) is the slow stage.
+Strands, danglings, loops and the refinement come from one load of the file. The log
+should end with:
 
-Check it against the shipped results:
+```
+Found 5156 strands, 395 danglings, 2721 loops
+```
+
+The strand and dangling searches take under a second; the loop search (igraph's minimum
+cycle basis) is nearly all of the time and of the memory:
+
+| | wall time | peak memory |
+|---|---|---|
+| cluster node, one core (`run_log.txt`) | 6 min 23 s | 10.4 GB |
+| laptop | 2 min 24 s | 8.6 GB |
+
+Add `--raw` to also write `results_raw.pkl`, a `graph_analysis.NetworkStats` holding the
+same unrefined strands, danglings and loops in one object.
+
+## 2. Check the numbers
 
 ```bash
-python3 -c "
+PYTHONPATH=src python3 - <<'PY'
+import igraph                      # first, see the README
 import pickle
-with open('results.pkl', 'rb') as f: new = pickle.load(f)
-with open('../examples/atrp/Scanlan_Case.pkl', 'rb') as f: shipped = pickle.load(f)
-fields = ['effective_crosslinker_d4', 'effective_crosslinker_d3', 'all_crosslinker_d4',
-          'all_crosslinker_d3', 'correct_crosslinker_d4', 'correct_crosslinker_d3',
-          'switched_crosslinker_d4']
-print('crosslinker-density stats match:', all(getattr(new, k) == getattr(shipped, k) for k in fields))
-"
+with open("results.pkl", "rb") as f:
+    refined = pickle.load(f)
+for name in ("effective_crosslinker_d4", "effective_crosslinker_d3", "all_crosslinker_d4",
+             "all_crosslinker_d3", "correct_crosslinker_d4", "correct_crosslinker_d3",
+             "switched_crosslinker_d4"):
+    print(name, getattr(refined, name))
+print("refined:", len(refined.strands), "strands,", len(refined.danglings), "danglings,", len(refined.loops), "loops")
+PY
 ```
 
-Expect `True` - `[2025, 401, 2903, 29, 878, -372, 377]`. The shipped
-`strands.pkl` has 5,156 strands (earlier releases found 5,138 and missed some
-parallel chains - see the main README's note on earlier strand counts); the density
-stats above are unchanged by that. Danglings (395) and loops are unchanged.
+Expected:
 
-## 2. Step-by-step: the same result, one stage at a time
+```
+effective_crosslinker_d4 2025
+effective_crosslinker_d3 401
+all_crosslinker_d4 2903
+all_crosslinker_d3 29
+correct_crosslinker_d4 878
+correct_crosslinker_d3 -372
+switched_crosslinker_d4 377
+refined: 4650 strands, 398 danglings, 2721 loops
+```
 
-Useful for inspecting an intermediate stage, or resuming after a crash - each stage
-writes its own file.
+Before the refinement there are 5,156 strands and 395 danglings; of the 2,721 loops, 496
+have exactly one crosslinker on them (primary loops).
+
+## 3. One stage at a time
+
+Each stage writes only its own file and never runs the refinement, because the files it
+needs may not exist. The files `--stage full` wrote work as inputs here:
 
 ```bash
-# Strands: chains between two crosslinkers (degree >= 3)
-python3 main.py --function shortest-path \
-    --input-file ../examples/atrp/edges_0.bds --format bond-list \
-    --output-file strands.pkl --action crosslinkers
+D=examples/data/atrp_s1_sys1_0.data
+python3 src/main.py --function topology --stage strands   --input-file $D --output-file strands.pkl
+python3 src/main.py --function topology --stage danglings --input-file $D --output-file danglings.pkl
+python3 src/main.py --function topology --stage loops     --input-file $D --output-file igloops.pkl
 
-# Dangling chains: chains from a crosslinker to a chain end (degree == 1)
-python3 main.py --function shortest-path \
-    --input-file ../examples/atrp/edges_0.bds --format bond-list \
-    --output-file danglings.pkl --action danglings
-
-# Minimum cycle basis (loops), with per-loop crosslinker counts
-python3 main.py --function topology --stage loops \
-    --input-file ../examples/atrp/edges_0.bds --format bond-list \
-    --output-file igloops.pkl --nvertices 106250
-
-# Scanlan-Case refinement of the three files above
-python3 main.py --function topology --stage scanlan-case \
-    --input-file ../examples/atrp/edges_0.bds --format bond-list \
+# redo only the refinement, from the three files above
+python3 src/main.py --function topology --stage scanlan-case --input-file $D \
     --strands-file strands.pkl --danglings-file danglings.pkl --loops-file igloops.pkl \
-    --output-file Scanlan_Case.pkl --raw
+    --output-file Scanlan_Case.pkl
 ```
 
-Each output file should match this folder's shipped copy exactly
-(`python3 main.py --function compare --file1 strands.pkl --file2 ../examples/atrp/strands.pkl`
-prints two equal counts as a quick check; byte-for-byte comparison needs a small
-script like the one in step 1).
+The refined result from these files is the same as `results.pkl`. This is the way to try
+a different network quickly: run `strands` and `danglings` (seconds), and only run `loops`
+(minutes, several GB) when you need it.
 
-`--nvertices 106250` above matches the number this network had *before* removing
-unreacted monomer (106,250 beads, down to the 103,149 in `edges_0.bds` after
-deletion) - a holdover from an earlier pipeline stage. It's safe either way: omitting
-`--nvertices` (letting it infer from the topology) gives an identical result, since
-vertex padding doesn't affect loop detection, only edge order does (both the full
-data file and this bond-list format preserve the file's original line order).
+`python3 src/main.py --function compare --file1 strands.pkl --file2 results_strands.pkl`
+prints the two entry counts as a quick check; comparing the contents needs a short script.
 
-## 3. What each output means
+## 4. What each output means
 
-- **`strands.pkl`** / **`danglings.pkl`**: flat lists of atom-ID paths. A strand's
-  first and last IDs are crosslinkers (degree >= 3); a dangling chain's last ID is a
-  free chain end (degree == 1).
-- **`igloops.pkl`**: `[loops, crosslinker_counts]` - `loops[i]` is the member-atom set
-  of one independent smallest ring; `crosslinker_counts[i]` is how many of those atoms
-  are crosslinkers. A count of 1 is a *primary loop* (a dead-end ring off a single
-  junction - a defect, not a load path).
-- **`Scanlan_Case.pkl`** (now a `graph_analysis.RefinedStats`, not the old nested-list
-  format): refined strands/danglings/loops after reclassifying crosslinkers that
-  carry a primary loop or dangling chain(s) as linear units, plus the resulting
-  effective-vs-total crosslinker density (`effective_crosslinker_d4/d3`,
-  `all_crosslinker_d4/d3`, ...). `--raw` additionally saves `Scanlan_Case_raw.pkl` (a
-  `NetworkStats`): the pre-refinement strands/danglings/loops, for sanity-checking a
-  configuration without redoing the analysis.
+- **strands / danglings** - flat lists of atom-ID paths. A strand's first and last IDs are
+  crosslinkers (degree >= 3) and every atom between them has degree 2; the lower ID comes
+  first. A dangling chain runs from a crosslinker to a free chain end (degree == 1).
+  Several parallel chains between the same two crosslinkers are separate strands, and a
+  direct bond between two crosslinkers is a strand of two atoms (360 here).
+- **loops** - `[loops, crosslinker_counts]`: `loops[i]` is the member atoms of one
+  independent smallest ring, `crosslinker_counts[i]` how many of them are crosslinkers.
+  A count of 1 is a *primary loop*, a dead-end ring off a single junction - a defect, not a
+  load path.
+- **`results.pkl`** - the refined strands, danglings and loops after reclassifying
+  crosslinkers that carry a primary loop or dangling chains as linear units, plus the
+  resulting effective-vs-total crosslinker density (`effective_crosslinker_d4/d3`,
+  `all_crosslinker_d4/d3`, ...). See `src/graph_analysis/scanlan_case.py`.
 
-See the main [README](../../README.md)'s reproducibility notes and the two topology
-papers in `../../references/` for the full scientific background (the Scanlan-Case
-criterion, what makes a crosslinker "effective").
+## 5. Notes
+
+- **Node IDs are the raw atom IDs of the data file** in every output, so a loop's atoms
+  can be matched to strand and dangling endpoints directly.
+- **Loops depend on edge order.** A minimum cycle basis is not always unique, and igraph's
+  choice among equally short cycles depends on the order the bonds were added, which is the
+  order of the Bonds section. The total loop count and the primary-loop count do not change,
+  but a few individual loops can.
+- **Older outputs.** Earlier releases found 5,138 strands here, not 5,156: their search
+  missed strands when three or more chains join the same two crosslinkers (see the main
+  README). The crosslinker densities above are the same either way.
+- **Legacy inputs.** `--format bond-list` and `--format rmc` read a bare bond table or an
+  RMC-style edge list; there is no example file for them, since the LAMMPS reader makes
+  them unnecessary here.
+
+See the main [README](../../README.md) and the topology papers cited there for the
+scientific background (the Scanlan-Case criterion, what makes a crosslinker "effective").
