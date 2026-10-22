@@ -116,7 +116,7 @@ Quick functional check with a real file:
 
 ```bash
 vendor/.spatial-venv/bin/python src/main.py --function betweenness \
-    --input-file examples/betweenness/atrp_s1_sys1_0.data --inspect
+    --input-file examples/data/atrp_s1_sys1_0.data --inspect
 ```
 
 Once this all works, `exit` the interactive session (`qsub -I` sessions count
@@ -139,7 +139,7 @@ tying up an interactive session. Example PBS script
 
 cd "$PBS_O_WORKDIR"
 vendor/.spatial-venv/bin/python src/main.py --function betweenness \
-    --input-file examples/betweenness/atrp_s1_sys1_0.data \
+    --input-file examples/data/atrp_s1_sys1_0.data \
     --direction x --validate-stock
 ```
 
@@ -154,7 +154,7 @@ is single-threaded (more cores don't help it), and so are `--function topology`/
 
 See `vendor/README.md` for what the build actually does and the underlying
 `vendor/python-igraph/SPATIAL_BETWEENNESS.md` for the full scientific/build reference,
-and the three `examples/*/TUTORIAL.md` files for what to actually run once this is
+and the three `examples/example_*/TUTORIAL.md` files for what to actually run once this is
 built.
 
 Sources:

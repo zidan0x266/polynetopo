@@ -22,10 +22,3 @@ graph-analysis = "graph_analysis.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[project.optional-dependencies]
-test = ["pytest"]
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-pythonpath = ["src", "tests"]

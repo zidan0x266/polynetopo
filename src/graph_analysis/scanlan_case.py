@@ -13,7 +13,7 @@ recomputes the effective crosslinker density.
 Note on a fixed bug: earlier versions of this module (`analysis_Scanlan_Case.py`,
 used for the ATRP/FRP papers) merged strands with a loop that removed items
 from a list while iterating over it directly, which silently skips the
-element right after any removed one. On the shipped `examples/atrp` dataset
+element right after any removed one. On the 103,149-atom sys1 network (`examples/data/atrp_s1_sys1_0.data`)
 this left 13 of 4632 refined strands (~0.3%) merged incompletely - split
 into two shorter fragments instead of one continuous (occasionally
 closed-loop) strand through the demoted crosslinker. It has no effect on the
