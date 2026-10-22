@@ -149,8 +149,8 @@ pbsq -f <your-username>       # or: qstat -was1
 ```
 
 Adjust `--l select=1:ncpus=...` and `walltime` to the job - `--function betweenness`
-is single-threaded (more cores don't help it), while `--function topology`/
-`shortest-path` do use multiple processes (`--ncpus`) for the crosslinker-pair search.
+is single-threaded (more cores don't help it), and so are `--function topology`/
+`shortest-path` (the strand/dangling search is one low-memory pass, not a process pool).
 
 See `vendor/README.md` for what the build actually does and the underlying
 `vendor/python-igraph/SPATIAL_BETWEENNESS.md` for the full scientific/build reference,

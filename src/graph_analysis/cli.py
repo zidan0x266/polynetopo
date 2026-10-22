@@ -21,7 +21,7 @@ from pathlib import Path
 from .crosslink import CrosslinkAction, CrosslinkPathAnalyzer
 from .loops import LoopAnalyzer, LoopBasis
 from .network import PolymerNetwork
-from .pipeline import NetworkAnalysisPipeline, PipelineConfig
+from .pipeline import NetworkAnalysisPipeline
 from .scanlan_case import NetworkStats, ScanlanCaseAnalyzer, ScanlanCaseResult
 
 logging.basicConfig(
@@ -67,15 +67,7 @@ def _write_result(result: ScanlanCaseResult, output_file: str, write_raw: bool) 
 def _topology_full(args: argparse.Namespace) -> None:
     network = _load_network(args)
 
-    pipeline = NetworkAnalysisPipeline(
-        network=network,
-        config=PipelineConfig(
-            sys_name=args.sys_name or Path(args.output_file).stem,
-            ncpus=args.ncpus,
-            max_chunk_size=args.max_chunk_size,
-        ),
-        n_vertices=args.nvertices,
-    )
+    pipeline = NetworkAnalysisPipeline(network=network, n_vertices=args.nvertices)
     result = pipeline.run()
     _write_result(result, args.output_file, args.raw)
 
@@ -125,13 +117,7 @@ def _topology(args: argparse.Namespace) -> None:
 def _shortest_path(args: argparse.Namespace) -> None:
     network = _load_network(args)
 
-    analyzer = CrosslinkPathAnalyzer(
-        sys_name=args.sys_name,
-        action=CrosslinkAction(args.action),
-        ncpus=args.ncpus,
-        max_chunk_size=args.max_chunk_size,
-    )
-    paths = [path for path in analyzer.run(network) if path]
+    paths = CrosslinkPathAnalyzer(CrosslinkAction(args.action)).run(network)
 
     with open(args.output_file, "wb") as out:
         pickle.dump(paths, out)
@@ -232,7 +218,7 @@ _REQUIRED_ARGS = {
     ("topology", "scanlan-case"): [
         "input_file", "strands_file", "danglings_file", "loops_file", "output_file",
     ],
-    ("shortest-path", None): ["sys_name", "input_file", "output_file", "action"],
+    ("shortest-path", None): ["input_file", "output_file", "action"],
     ("betweenness", None): ["input_file"],
     ("compare", None): ["file1", "file2"],
 }
@@ -271,17 +257,10 @@ def build_parser() -> argparse.ArgumentParser:
         "data file (default), a pre-trimmed bare bond list, or an RMC-style edge list",
     )
     common.add_argument(
-        "--sys-name", default=None,
-        help="(topology stage=full, shortest-path) Cache directory prefix; for topology, "
-        "defaults to the output file's stem",
-    )
-    common.add_argument(
         "--nvertices", type=int, default=None,
         help="(topology stage=full/loops) Number of nodes in the system; inferred from the "
         "topology if omitted",
     )
-    common.add_argument("--ncpus", type=int, default=None, help="(topology stage=full, shortest-path)")
-    common.add_argument("--max-chunk-size", type=int, default=None, help="(topology stage=full, shortest-path)")
 
     topology = parser.add_argument_group("--function topology")
     topology.add_argument(

@@ -34,7 +34,7 @@ Scanlan-Case refinement - from a single topology load, with no intermediate file
 ```bash
 python3 main.py --function topology \
     --input-file ../examples/shortest_path/atrp_s3_sys3_0.data \
-    --output-file results.pkl --raw --ncpus 4 --max-chunk-size 10000
+    --output-file results.pkl --raw
 ```
 
 Writes `results.pkl` (a `graph_analysis.RefinedStats`: the Scanlan-Case-refined
@@ -50,20 +50,17 @@ line order rather than going through `networkx`'s own edge iteration).
 ### `--stage loops`/`scanlan-case` (step-by-step, resumable)
 
 Useful for inspecting an intermediate stage, running a memory-heavy stage on a bigger
-machine separately, or resuming after a crash - each stage caches its crosslinker
-search matrix under `cache-<sys-name>-*/`. The `examples/atrp` dataset only has a
+machine separately, or resuming after a crash. The `examples/atrp` dataset only has a
 pre-trimmed bond list, so it needs `--format bond-list`:
 
 ```bash
-# Strands: shortest paths between crosslinkers (degree >= 3)
-python3 main.py --function shortest-path --sys-name strands --input-file ../examples/atrp/edges_0.bds \
-    --output-file strands.pkl --action crosslinkers --max-chunk-size 10000 --ncpus 4 --format bond-list
-rm -r cache-*
+# Strands: chains between two crosslinkers (degree >= 3)
+python3 main.py --function shortest-path --input-file ../examples/atrp/edges_0.bds \
+    --output-file strands.pkl --action crosslinkers --format bond-list
 
-# Dangling chains: shortest paths from a crosslinker to a chain end (degree == 1)
-python3 main.py --function shortest-path --sys-name danglings --input-file ../examples/atrp/edges_0.bds \
-    --output-file danglings.pkl --action danglings --ncpus 4 --max-chunk-size 10000 --format bond-list
-rm -r cache-*
+# Dangling chains: chains from a crosslinker to a chain end (degree == 1)
+python3 main.py --function shortest-path --input-file ../examples/atrp/edges_0.bds \
+    --output-file danglings.pkl --action danglings --format bond-list
 
 # Minimum cycle basis (loops), with per-loop crosslinker counts
 python3 main.py --function topology --stage loops --input-file ../examples/atrp/edges_0.bds \
@@ -137,11 +134,11 @@ already recorded there.
 ## As a library
 
 ```python
-from graph_analysis import PolymerNetwork, NetworkAnalysisPipeline, PipelineConfig
+from graph_analysis import PolymerNetwork, NetworkAnalysisPipeline
 
 network = PolymerNetwork.from_lammps("atrp_s3_sys3_0.data")  # a full LAMMPS data file
 # network = PolymerNetwork.from_bond_list("edges_0.bds")     # legacy: a pre-trimmed bond table
-pipeline = NetworkAnalysisPipeline(network, PipelineConfig(sys_name="run1", ncpus=4))
+pipeline = NetworkAnalysisPipeline(network)
 result = pipeline.run()  # a ScanlanCaseResult: result.refined, result.raw
 
 # Needs the in-house igraph build (../vendor/) - run with vendor/.spatial-venv/bin/python
@@ -154,7 +151,7 @@ result = analysis.run()  # a CentralityResult: result.raw_gebc, result.obc, resu
 See `graph_analysis/__init__.py` for the topology/shortest-path public API
 (`PolymerNetwork`, `CrosslinkAction`, `CrosslinkPathAnalyzer`, `LoopAnalyzer`,
 `LoopBasis`, `NetworkStats`, `RefinedStats`, `ScanlanCaseAnalyzer`,
-`ScanlanCaseResult`, `NetworkAnalysisPipeline`, `PipelineConfig`) and
+`ScanlanCaseResult`, `NetworkAnalysisPipeline`) and
 `graph_analysis/betweenness/__init__.py` for the betweenness public API
 (`SpatialBetweennessAnalysis`, `AnalysisConfig`, `Direction`, `PolymerNetwork`,
 `LammpsDataReader`, `CentralityResult`, `ValidationReport`) - deliberately not

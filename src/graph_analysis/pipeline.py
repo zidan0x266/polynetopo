@@ -9,7 +9,6 @@ pickle between each step.
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
 from typing import Optional
 
 from .crosslink import CrosslinkAction, CrosslinkPathAnalyzer
@@ -20,23 +19,11 @@ from .scanlan_case import NetworkStats, ScanlanCaseAnalyzer, ScanlanCaseResult
 logger = logging.getLogger(__name__)
 
 
-@dataclass(slots=True)
-class PipelineConfig:
-    """Shared settings for the two crosslinker path searches."""
-
-    sys_name: str
-    ncpus: Optional[int] = None
-    max_chunk_size: Optional[int] = None
-
-
 class NetworkAnalysisPipeline:
     """Runs strands + danglings + loops + Scanlan-Case from one loaded network."""
 
-    def __init__(
-        self, network: PolymerNetwork, config: PipelineConfig, n_vertices: Optional[int] = None
-    ) -> None:
+    def __init__(self, network: PolymerNetwork, n_vertices: Optional[int] = None) -> None:
         self.network = network
-        self.config = config
         self.n_vertices = n_vertices
 
     def run(self) -> ScanlanCaseResult:
@@ -53,10 +40,4 @@ class NetworkAnalysisPipeline:
         return NetworkStats.from_loop_basis(strands, danglings, loops)
 
     def _search(self, action: CrosslinkAction) -> list[list[int]]:
-        analyzer = CrosslinkPathAnalyzer(
-            sys_name=f"{self.config.sys_name}-{action.value}",
-            action=action,
-            ncpus=self.config.ncpus,
-            max_chunk_size=self.config.max_chunk_size,
-        )
-        return [path for path in analyzer.run(self.network) if path]
+        return CrosslinkPathAnalyzer(action).run(self.network)

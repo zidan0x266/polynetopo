@@ -3,9 +3,10 @@
 Topology, shortest-path and spatial betweenness analysis for crosslinked polymer
 networks: elastically effective strands, dangling chains, primary/higher-order loops,
 Scanlan-Case crosslinker density refinement, and native GEBC/OBC/DBC edge betweenness.
-Built on `networkx` (shortest-path search), stock `igraph` (minimum cycle basis), and
-an in-house `igraph` build (spatial betweenness), with a multiprocessing-accelerated
-search over large networks.
+Built on `networkx` and the in-house `igraph` build in `vendor/` (minimum cycle basis
+and spatial betweenness; only the betweenness part differs from stock `igraph`). The
+strand/dangling search is a single linear-time pass over the network, so it needs no
+multiprocessing and little memory even on large, dense networks.
 
 This code produced the analysis in the three papers cited at the bottom of this README.
 
@@ -31,6 +32,17 @@ pre-trimmed bond table / RMC-style edge list - `--function topology` identifies:
 - **OBC** - orientation-weighted betweenness, by alignment with a loading axis.
 - **DBC** - distance-weighted betweenness, by source-target spatial separation.
 
+## Note on strand counts from earlier releases
+
+Earlier releases found strands with a pairwise Yen's-algorithm search that missed
+some strands when three or more separate chains join the same two crosslinkers (its
+`ignore_nodes` set was shared across iterations, so the source node blocked later
+searches). The search is now a chain walk that finds every chain. On the shipped
+examples this adds 57 strands (17,934 -> 17,991, ~0.3%) to `examples/shortest_path`
+and 18 (5,138 -> 5,156) to `examples/atrp`; dangling chains and loops are unchanged.
+Strand-derived numbers from earlier runs, including the Scanlan-Case refinement, may
+differ slightly.
+
 ## Installation
 
 ```bash
@@ -49,7 +61,7 @@ refinement - from a single topology load, with no intermediate files:
 ```bash
 python3 src/main.py --function topology \
     --input-file examples/shortest_path/atrp_s3_sys3_0.data \
-    --output-file results.pkl --raw --ncpus 4 --max-chunk-size 10000
+    --output-file results.pkl --raw
 ```
 
 `--input-file` here is a full LAMMPS data file (`write_data` output) - the default,
@@ -70,10 +82,10 @@ below for spatial betweenness.
 As a library:
 
 ```python
-from graph_analysis import PolymerNetwork, NetworkAnalysisPipeline, PipelineConfig
+from graph_analysis import PolymerNetwork, NetworkAnalysisPipeline
 
 network = PolymerNetwork.from_lammps("atrp_s3_sys3_0.data")  # a full LAMMPS data file
-pipeline = NetworkAnalysisPipeline(network, PipelineConfig(sys_name="run1", ncpus=4))
+pipeline = NetworkAnalysisPipeline(network)
 result = pipeline.run()  # a ScanlanCaseResult: result.refined, result.raw
 
 from graph_analysis.betweenness import SpatialBetweennessAnalysis  # needs the in-house build
@@ -134,8 +146,7 @@ vendor/.spatial-venv/bin/python -c 'import igraph as ig; print(hasattr(ig.Graph,
 ```
 
 Every command below uses `vendor/.spatial-venv/bin/python`, not plain `python3`. Stock
-PyPI `igraph` (what `--function topology`/`shortest-path` use) doesn't have
-`edge_betweenness_spatial`; calling `--function betweenness` with it raises a clear
+PyPI `igraph` doesn't have `edge_betweenness_spatial`; calling `--function betweenness` with it raises a clear
 `RuntimeError` rather than silently falling back to something else.
 
 ### 3. Inspect new input before computing anything

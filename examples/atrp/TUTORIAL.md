@@ -24,52 +24,48 @@ All commands assume you're in `src/` (paths are relative to there, matching
 ```bash
 python3 main.py --function topology \
     --input-file ../examples/atrp/edges_0.bds --format bond-list \
-    --output-file results.pkl --raw --ncpus 4 --max-chunk-size 10000
+    --output-file results.pkl --raw
 ```
 
 Strands, danglings, loops and their Scanlan-Case refinement, from one topology load,
-no intermediate files. Takes about a minute on this network (crosslinker search is
-the dominant cost; see `src/graph_analysis/crosslink.py` for how it stays tractable
-on much larger, denser networks).
+no intermediate files. Strands and danglings take a few seconds on this network
+(one pass over the bonds, see `src/graph_analysis/crosslink.py`); loop detection
+(the minimum cycle basis) is the slow stage.
 
-Check it against the shipped ground truth:
+Check it against the shipped results:
 
 ```bash
 python3 -c "
 import pickle
-with open('results.pkl', 'rb') as f: refined = pickle.load(f)
-with open('../examples/atrp/Scanlan_Case.pkl', 'rb') as f: old = pickle.load(f)
-stats = [refined.effective_crosslinker_d4, refined.effective_crosslinker_d3,
-         refined.all_crosslinker_d4, refined.all_crosslinker_d3,
-         refined.correct_crosslinker_d4, refined.correct_crosslinker_d3,
-         refined.switched_crosslinker_d4]
-print('crosslinker-density stats match:', stats == old[2])
+with open('results.pkl', 'rb') as f: new = pickle.load(f)
+with open('../examples/atrp/Scanlan_Case.pkl', 'rb') as f: shipped = pickle.load(f)
+fields = ['effective_crosslinker_d4', 'effective_crosslinker_d3', 'all_crosslinker_d4',
+          'all_crosslinker_d3', 'correct_crosslinker_d4', 'correct_crosslinker_d3',
+          'switched_crosslinker_d4']
+print('crosslinker-density stats match:', all(getattr(new, k) == getattr(shipped, k) for k in fields))
 "
 ```
 
-Expect `True` - `[2025, 401, 2903, 29, 878, -372, 377]` either way. (The individual
-refined *strands* may differ in a small number of entries from a historical bug fix -
-see `src/graph_analysis/scanlan_case.py`'s module docstring; everything else matches
-exactly.)
+Expect `True` - `[2025, 401, 2903, 29, 878, -372, 377]`. The shipped
+`strands.pkl` has 5,156 strands (earlier releases found 5,138 and missed some
+parallel chains - see the main README's note on earlier strand counts); the density
+stats above are unchanged by that. Danglings (395) and loops are unchanged.
 
 ## 2. Step-by-step: the same result, one stage at a time
 
 Useful for inspecting an intermediate stage, or resuming after a crash - each stage
-writes its own file, and the crosslinker search caches its work under
-`cache-<sys-name>-*/`.
+writes its own file.
 
 ```bash
-# Strands: shortest paths between crosslinkers (degree >= 3)
-python3 main.py --function shortest-path --sys-name strands \
+# Strands: chains between two crosslinkers (degree >= 3)
+python3 main.py --function shortest-path \
     --input-file ../examples/atrp/edges_0.bds --format bond-list \
-    --output-file strands.pkl --action crosslinkers --ncpus 4 --max-chunk-size 10000
-rm -r cache-*
+    --output-file strands.pkl --action crosslinkers
 
-# Dangling chains: shortest paths from a crosslinker to a chain end (degree == 1)
-python3 main.py --function shortest-path --sys-name danglings \
+# Dangling chains: chains from a crosslinker to a chain end (degree == 1)
+python3 main.py --function shortest-path \
     --input-file ../examples/atrp/edges_0.bds --format bond-list \
-    --output-file danglings.pkl --action danglings --ncpus 4 --max-chunk-size 10000
-rm -r cache-*
+    --output-file danglings.pkl --action danglings
 
 # Minimum cycle basis (loops), with per-loop crosslinker counts
 python3 main.py --function topology --stage loops \
@@ -86,8 +82,7 @@ python3 main.py --function topology --stage scanlan-case \
 Each output file should match this folder's shipped copy exactly
 (`python3 main.py --function compare --file1 strands.pkl --file2 ../examples/atrp/strands.pkl`
 prints two equal counts as a quick check; byte-for-byte comparison needs a small
-script like the one in step 1, or `examples/shortest_path/compare_new_vs_old.py`
-adapted to this folder).
+script like the one in step 1).
 
 `--nvertices 106250` above matches the number this network had *before* removing
 unreacted monomer (106,250 beads, down to the 103,149 in `edges_0.bds` after
