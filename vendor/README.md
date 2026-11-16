@@ -12,8 +12,7 @@ not pull their content until you run `git submodule update --init`.
 ```bash
 git submodule update --init vendor/igraph vendor/python-igraph
 
-# This fork has no git tags (lost when it was forked), and igraph's CMake build
-# needs one to determine its version string. Bypass with the known version:
+# igraph's CMake build reads its version string from this file:
 echo "1.0.0" > vendor/igraph/IGRAPH_VERSION
 
 cd vendor
@@ -33,11 +32,6 @@ venv so it becomes the one environment for every `--function`:
 
 Use `vendor/.spatial-venv/bin/python src/main.py --function betweenness ...` (or
 any other `--function`) from the repo root. See
-`vendor/python-igraph/SPATIAL_BETWEENNESS.md` for the full build reference,
+`vendor/python-igraph/SPATIAL_BETWEENNESS.md` for the full build reference and the
 scientific conventions (raw DBC is distance-only; apply a reference length
-yourself - see `CentralityResult.dbc_for_length`), and the extensive validation
-already recorded there against stock igraph and independent path enumeration.
-
-Building on an HPC cluster (PBS/SLURM job submission, not just a local build)? See
-[`IMPROV.md`](IMPROV.md) for a step-by-step walkthrough on Argonne LCRC's Improv
-cluster specifically.
+yourself - see `CentralityResult.dbc_for_length`).

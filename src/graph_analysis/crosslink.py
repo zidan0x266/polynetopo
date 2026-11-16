@@ -54,9 +54,7 @@ class CrosslinkPathAnalyzer:
     the lower to the higher node ID.
 
     This finds every distinct chain between a crosslinker pair, including when
-    three or more parallel chains join the same two crosslinkers. (Releases
-    before the chain walk used a pairwise Yen's-algorithm search that missed
-    some of those, about 0.3% of strands on the 104,704-atom sys3 network.)
+    three or more parallel chains join the same two crosslinkers.
     """
 
     action: CrosslinkAction

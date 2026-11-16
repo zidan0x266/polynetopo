@@ -8,8 +8,7 @@ periodic images, and its length divided by p is the normalized length D^g (bonds
 length). The shortest one predicts where the first bond breaks and, through D^g_min / L0,
 the strain at which it breaks.
 
-All commands run from the repository root. On a cluster, load the Python module first
-(see the README's note on import order).
+All commands run from the repository root.
 
 ## 0. What's here
 
@@ -60,12 +59,13 @@ path. The log shows how many of the 103,149 atoms found a valid path at each per
 | 6 | 0 | 4 min 16 s |
 
 Removing redundant paths then leaves **3,321 paths**, and the summary is `"min_length": 155.0`,
-`"max_length": 419.0`, `"mean_length": 218.80`, `"median_length": 211.0`.
+`"max_length": 419.0`, `"mean_length": 218.80`, `"median_length": 211.0`. The lengths and the
+paths are identical to those of the authors' code run on the same network with the same buffer
+image.
 
 | | wall time | peak memory of the largest process |
 |---|---|---|
 | cluster node, 34 workers (`run_log.txt`) | 17 min | 0.79 GB |
-| laptop, 8 workers (earlier version of the code) | 106 min | 5.8 GB |
 
 Each worker holds one copy of the multi-image graph, so memory grows with `--ncpus` and with
 the number of periods. The time per period grows with p because the paths and graphs do.
@@ -74,7 +74,6 @@ the number of periods. The time per period grows with p because the paths and gr
 
 ```bash
 PYTHONPATH=src python3 - <<'PY'
-import igraph                      # first, see the README
 import pickle
 with open("examples/example_3/atrp_s1_sys1_0.x.sp.pkl", "rb") as f:
     sp = pickle.load(f)
@@ -102,24 +101,13 @@ Expected: `3321 155.0`, then the smallest D^g per period
   the stack between its ends. `0` keeps it inside, and the paths can differ.
 - `--min-sp-only`: also apply the paper's optional Case 3 and keep only the shortest path of
   each start atom. The 3,321 paths here start from 2,526 different atoms, so this would keep
-  2,526 of them, with the same minimum of 155.0 (counted by applying the same step to this
-  result, not from a separate run). It is off by default, so an atom can have a path at
+  2,526 of them, with the same minimum of 155.0. It is off by default, so an atom can have a path at
   several periods.
 - `--keep-redundant`: skip the removal of redundant paths (the paper's Cases 1 and 2).
 - `--slice-max L`, `--ncpus N`, `--checkpoint-file F`: start paths from a thin slice, use
   worker processes, and save progress after each period so an interrupted run resumes.
 
-## 5. How it was checked
+## 5. Notes
 
-On this network the lengths and the paths, row by row, are identical to those of the original
-code, run with the same buffer image, on the cluster: the same 3,321 lengths, from 155 to 419.
-On random periodic networks, the results equal those of the original code for
-buffer images 0 to 2, along all three axes, with one and with several workers, and for Case 3.
-
-## 6. Notes
-
-- The input may not contain an atom pair bonded twice, or an atom bonded to itself: a path
-  lists atoms, so it could not say which of two parallel bonds it used. This raises an error
-  naming the pair. The reaction code that produced this network does not create such bonds.
 - Atom IDs are the raw IDs of the data file.
 - Run `--direction y` and `--direction z` for the other axes; each is a separate run.

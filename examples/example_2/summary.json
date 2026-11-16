@@ -1,7 +1,7 @@
 {
   "schema_version": 2,
   "raw_dbc_weight": "distance",
-  "input": "/lcrc/project/nano-soft-assembly/zidan/sp_gebc/atrp_argonne/polynetopo-main/examples/data/atrp_s1_sys1_0.data",
+  "input": "examples/data/atrp_s1_sys1_0.data",
   "nodes": 103149,
   "edges": 105869,
   "neff": 103149,
@@ -44,5 +44,5 @@
     "atol": 1e-08,
     "relative_denominator_floor": 1e-15
   },
-  "output": "/lcrc/project/nano-soft-assembly/zidan/sp_gebc/atrp_argonne/polynetopo-main/examples/example_2/atrp_s1_sys1_0.x.spatial.pkl"
+  "output": "examples/example_2/atrp_s1_sys1_0.x.spatial.pkl"
 }

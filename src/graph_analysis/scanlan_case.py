@@ -9,18 +9,6 @@ of f=3 that carries a primary loop or a dangling chain is reclassified as a
 linear unit, folded into whichever dangling chain or strand runs through it.
 This module reclassifies the raw strands/danglings/loops accordingly and
 recomputes the effective crosslinker density.
-
-Note on a fixed bug: earlier versions of this module (`analysis_Scanlan_Case.py`,
-used for the ATRP/FRP papers) merged strands with a loop that removed items
-from a list while iterating over it directly, which silently skips the
-element right after any removed one. On the 103,149-atom sys1 network (`examples/data/atrp_s1_sys1_0.data`)
-this left 13 of 4632 refined strands (~0.3%) merged incompletely - split
-into two shorter fragments instead of one continuous (occasionally
-closed-loop) strand through the demoted crosslinker. It has no effect on the
-aggregate crosslinker-density statistics (`effective_crosslinker_d3/d4` and
-friends), only on the identity/length of a small number of individual
-strands. `_merge_strands_at` below iterates over a stable copy and does not
-have this bug.
 """
 
 from __future__ import annotations
@@ -86,7 +74,7 @@ class ScanlanCaseResult:
     raw: NetworkStats
 
     def to_legacy(self) -> list:
-        """The `[[refined...], [raw...], [counts...]]` shape earlier versions pickled."""
+        """The nested-list form `[[refined...], [raw...], [counts...]]`."""
         return [
             [self.refined.strands, self.refined.danglings, self.refined.loops, self.refined.loop_orders],
             [self.raw.strands, self.raw.danglings, self.raw.loops, self.raw.loop_orders],

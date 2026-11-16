@@ -4,25 +4,14 @@ Uses igraph (much faster than networkx for this) to find the network's
 minimum cycle basis, then counts how many crosslinkers sit on each loop -
 a loop with exactly one crosslinker on it is a primary loop.
 
-Reproducibility note: a minimum cycle basis isn't always unique - when
-multiple equally-short cycles compete to cover the same part of the cycle
-space, igraph's tie-breaking depends on the *order edges are added*, not on
-how many unused/isolated vertex ids you padded the graph out to (tested
-directly: on the ATRP example, padding the vertex count from 103149 - the
-largest atom id actually referenced by a bond - up through 106250, one at a
-time, never changed a single loop). So `n_vertices` is safe to infer; just
-make sure the edges themselves are fed in a consistent order if you need to
-reproduce a prior run's exact loop list byte-for-byte (`from_lammps` and
-`from_polymer_network` both preserve the topology file's original line
-order for this reason - reordering them, e.g. via `networkx`'s own edge
-iteration, measurably changes a small number (13 of 2721 on the ATRP
-example) of which loops get picked, though never the total count or the
-primary-loop count). To make this a non-issue rather than something to
-remember, both `LoopAnalyzer` constructors below funnel through the same
-`PolymerNetwork` parse and its stored `.edges` - there is exactly one place
-in this package that turns a topology file into an edge list, and both the
-`networkx` and `igraph` views are built from that same list object, so they
-can't disagree about node identity or edge order.
+The minimum cycle basis follows the order in which the edges are added: igraph
+chooses among equally short cycles by that order, while the vertex count
+(`n_vertices`, padded or inferred) does not affect the result. Both
+`LoopAnalyzer` constructors below build on the same `PolymerNetwork` parse
+and its stored `.edges`, in the topology file's line order - there is exactly
+one place in this package that turns a topology file into an edge list, and
+both the `networkx` and `igraph` views are built from that same list object,
+so they share node identity and edge order.
 """
 
 from __future__ import annotations

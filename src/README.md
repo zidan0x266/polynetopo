@@ -42,11 +42,8 @@ example network `../examples/data/atrp_s1_sys1_0.data`.
 
 - `lammps` (default) - a full LAMMPS data file (`write_data` output, with its
   Masses/Atoms/Velocities/Bonds/... sections); only the Bonds section is read.
-- `bond-list` - **legacy**: a bare bond table already trimmed down to just
-  `bond-id bond-type atom_i atom_j` per line, nothing else. Kept for topology files
-  saved this way before this package could read a full data file directly, and as a
-  starting point to adapt for a bond list from a different tool (e.g. a reactive
-  Monte Carlo / 3DBFM code) if its column layout differs.
+- `bond-list` - **legacy**: a bare bond table, `bond-id bond-type atom_i atom_j` per
+  line.
 - `rmc` - **legacy**: an RMC-style whitespace edge list.
 
 `--function shortest-path` and `--function betweenness` always read a full LAMMPS data
@@ -73,11 +70,7 @@ It writes, next to each other:
 - with `--raw`, `results_raw.pkl` - a `graph_analysis.NetworkStats`: the pre-refinement
   strands/danglings/loops in one object.
 
-`--nvertices` is optional - if omitted it's inferred from the topology (see the
-reproducibility note in `graph_analysis/loops.py` before relying on this to reproduce an
-old run bit-for-bit: vertex count doesn't affect the result, but edge *order* does,
-which is why every topology loader preserves the file's original line order rather than
-going through `networkx`'s own edge iteration).
+`--nvertices` is optional - if omitted it's inferred from the topology.
 
 ### Single stages
 
@@ -107,10 +100,9 @@ and `--nvertices`; it has no options controlling the search itself (it calls igr
 `minimum_cycle_basis()`). In a full run on the 103,149-atom example, on a laptop, the
 loop search took about 2.4 minutes and the whole process peaked near 8.6 GB.
 
-`Scanlan_Case.pkl`/`results.pkl` pickle a `graph_analysis.RefinedStats` dataclass rather
-than the old positional nested-list structure; call `.to_legacy()` on the
-`ScanlanCaseAnalyzer.run()` return value (before pickling) to recover the previous
-`[[refined...], [raw...], [counts...]]` shape if needed for older downstream scripts.
+`Scanlan_Case.pkl`/`results.pkl` pickle a `graph_analysis.RefinedStats` dataclass; call
+`.to_legacy()` on the `ScanlanCaseAnalyzer.run()` return value (before pickling) for the
+nested-list form `[[refined...], [raw...], [counts...]]`.
 
 ## `--function shortest-path`
 
@@ -128,8 +120,7 @@ python3 main.py --function shortest-path \
 ```
 
 - `--max-period M` (default 8): periods 1..M inclusive. The search stops earlier at the
-  first period without a valid path. It replaces the old image-count options: a period
-  p uses p + 1 images, so the old `--image-max 8` is `--max-period 6`.
+  first period without a valid path.
 - `--buffer-images N` (default 1): extra images on each side, so a path can leave the
   stack between its ends; `0` keeps every path inside it.
 - `--slice-max L`: start paths only from atoms within L of the box's low face along
@@ -150,7 +141,6 @@ raises an error naming the pair.
 The output is a pickled `graph_analysis.shortest_path.ShortestPathResult`:
 
 ```python
-import igraph   # first, so igraph finds its C++ runtime before numpy loads another one
 import pickle
 with open("atrp_s1_sys1_0.x.sp.pkl", "rb") as f:
     sp = pickle.load(f)               # needs graph_analysis importable, e.g. PYTHONPATH=src
@@ -193,12 +183,9 @@ build's own Python, not your regular environment's:
 - `--output-file` (default `<input>.<axis>.spatial.pkl`); `--overwrite` to replace
   existing output, `--quiet` to suppress progress.
 
-The output is a pickled `graph_analysis.betweenness.CentralityResult` - the same
-"plain pickle of a dataclass" convention as every other output in this package
-(`ScanlanCaseResult`, `NetworkStats`, ...), not a NumPy `.npz` archive:
+The output is a pickled `graph_analysis.betweenness.CentralityResult`:
 
 ```python
-import igraph   # first, see above
 import pickle
 with open("atrp_s1_sys1_0.x.spatial.pkl", "rb") as f:
     result = pickle.load(f)  # needs graph_analysis importable, e.g. PYTHONPATH=src
@@ -207,20 +194,11 @@ raw_gebc, raw_obc, raw_dbc = result.raw_gebc, result.raw_obc, result.raw_dbc
 obc, dbc = result.obc, result.dbc        # pair-normalized properties, not stored separately
 ```
 
-A pickle written by an earlier release of this package, from when `betweenness` was a
-folder rather than a module, no longer loads: it records the old module paths.
-
-See `../vendor/python-igraph/analysis/README.md` for the full scientific-convention
-reference (that document's own examples still show its original NumPy-archive
-output - the fields it describes carry over directly to this pickle's attributes,
-e.g. its `raw_GEBC_igraph`/`raw_OBC`/`raw_DBC`/`OBC`/`DBC` map to
-`result.raw_gebc`/`raw_obc`/`raw_dbc`/`obc`/`dbc`) and the extensive validation
-already recorded there.
+See `../vendor/python-igraph/analysis/README.md` for the full convention reference.
 
 ## As a library
 
 ```python
-import igraph  # first: see the README's note on import order
 from graph_analysis import PolymerNetwork, NetworkAnalysisPipeline
 
 network = PolymerNetwork.from_lammps("atrp_s1_sys1_0.data")  # a full LAMMPS data file
@@ -246,11 +224,9 @@ Public API by module:
   `CrosslinkPathAnalyzer`, `LoopAnalyzer`, `LoopBasis`, `NetworkStats`, `RefinedStats`,
   `ScanlanCaseAnalyzer`, `ScanlanCaseResult`, `NetworkAnalysisPipeline`.
 - `graph_analysis.lammps` (shared by the spatial analyses): `LammpsDataReader`,
-  `LammpsFormatError`, `LammpsNetwork` (atoms, coordinates, bonds and box; distinct from
-  the `networkx`-based `PolymerNetwork` and not interchangeable with it), `Direction`.
+  `LammpsFormatError`, `LammpsNetwork` (atoms, coordinates, bonds and box), `Direction`.
 - `graph_analysis.shortest_path`: `PeriodicShortestPathAnalysis`, `ShortestPathConfig`,
   `ShortestPathResult`.
 - `graph_analysis.betweenness`: `SpatialBetweennessAnalysis`, `AnalysisConfig`,
   `CentralityResult`, `ValidationReport`, `CentralityValidationError`, and re-exports of
-  the `lammps` names above. Deliberately not re-exported at the top level, since it needs
-  the in-house igraph build at analysis time.
+  the `lammps` names above.

@@ -9,10 +9,11 @@ networks, from a LAMMPS data file:
 | `shortest-path` | the shortest paths that wrap through the periodic box, which govern where and when the first bond breaks (Yu & Jackson, 2025) | bonds, coordinates, box |
 | `betweenness` | native GEBC / OBC / DBC edge betweenness | bonds, coordinates, box |
 
-This code produced the analysis in the first three papers cited at the bottom of this
-README. Its shortest-path analysis implements the method of the fourth, Yu & Jackson,
-ported from the authors' code
-([TheJacksonLab/shortest_path_thermoset](https://github.com/TheJacksonLab/shortest_path_thermoset)).
+This code produced the analysis in the three papers listed first under
+[Citing this work](#citing-this-work). Its shortest-path analysis implements the method of
+Yu & Jackson, ported from the authors' code
+([TheJacksonLab/shortest_path_thermoset](https://github.com/TheJacksonLab/shortest_path_thermoset)),
+and its betweenness analysis computes the spatially weighted betweenness of Bai et al.
 It is built on `networkx` and `igraph`; the betweenness analysis needs the in-house
 `igraph` build in `vendor/`, which also runs every other function.
 
@@ -93,8 +94,7 @@ python3 src/main.py --function shortest-path \
 The output is a pickled `ShortestPathResult`: `lengths` (D^g per path), `paths` (one
 `(n, 2)` array of `(atom ID, image)` rows per path, images counted from image 0, so
 `-1` or above p is a buffer image), `min_length_by_period`, and `summary()`. The input
-must have no repeated bonds (an atom pair bonded twice) - a path lists atoms, so it
-could not say which of two parallel bonds it used; this raises an error naming the
+must have no repeated bonds (an atom pair bonded twice); this raises an error naming the
 pair.
 
 Cost: one breadth-first search per start atom over a graph of p + 1 + 2 x
@@ -115,16 +115,6 @@ Computes, for every bond in one pass:
 See [Using `--function betweenness` correctly](#using---function-betweenness-correctly)
 below.
 
-## Note on strand counts from earlier releases
-
-Earlier releases found strands with a pairwise Yen's-algorithm search that missed
-some strands when three or more separate chains join the same two crosslinkers (its
-`ignore_nodes` set was shared across iterations, so the source node blocked later
-searches). The search is now a chain walk that finds every chain. On the 104,704-atom
-sys3 network this adds 57 strands (17,934 -> 17,991, ~0.3%) and on the 103,149-atom sys1
-network 18 (5,138 -> 5,156); dangling chains and loops are unchanged. Strand-derived
-numbers from earlier runs, including the Scanlan-Case refinement, may differ slightly.
-
 ## Installation
 
 Requires Python >= 3.10 with `networkx` (>= 3.0), `numpy`, `igraph` (the `python-igraph`
@@ -133,15 +123,6 @@ package) and `tqdm`. Install with `pip install -e .`, or skip the install and ru
 `--function betweenness` additionally needs the in-house igraph build in `vendor/` - see
 [`vendor/README.md`](vendor/README.md) and the section below. That build is a superset
 of stock igraph, so one environment can run every function.
-
-**Import igraph before numpy.** On some clusters the in-house build was made with a newer
-compiler than the system's and finds its newer `libstdc++` through its own library path.
-If numpy loads the system copy first, `import igraph` fails with `GLIBCXX_3.4.32 not
-found`. The package imports igraph first, so the command line and its worker processes
-are safe; a script of your own that imports `numpy` before `graph_analysis` needs
-`import igraph` first, or the newer `libstdc++` directory on `LD_LIBRARY_PATH`. On such a
-cluster, load the Python module (`module load python/...`) before running, in batch scripts
-and interactive sessions alike.
 
 ## Quick start
 
@@ -158,7 +139,6 @@ orthorhombic box. `python3 src/main.py --help` lists every option.
 As a library:
 
 ```python
-import igraph  # first, see Installation
 from graph_analysis import PolymerNetwork, NetworkAnalysisPipeline
 from graph_analysis.shortest_path import PeriodicShortestPathAnalysis, ShortestPathConfig
 
@@ -194,46 +174,34 @@ vendor/
     python-igraph/    git submodule: in-house Python bindings (same branch)
 ```
 
-Every graph view used by `--function topology` (the `networkx.Graph` used for
-strand/dangling search and degree lookups, and the `igraph.Graph` used for loop
-detection) is built from the same single, file-order-preserving parse in
-`PolymerNetwork` - so node IDs (raw atom IDs from the topology file) are guaranteed
-consistent across strands, danglings, and loops, and a loop's member atoms can be
-cross-referenced against strand/dangling endpoints directly by ID. `lammps.py` is the
-separate, array-based view that carries coordinates and the box for the spatial analyses;
-the two are not interchangeable.
-
 ## Using `--function betweenness` correctly
 
-The three most common mistakes are using the wrong Python interpreter, skipping
-validation on new data, and misreading the raw DBC convention - this section covers
-all three.
+This section covers the Python interpreter to use, the validation on new data, and
+the raw DBC convention.
 
 ### 1. Build once per machine
 
 ```bash
 git submodule update --init vendor/igraph vendor/python-igraph
-echo "1.0.0" > vendor/igraph/IGRAPH_VERSION   # the fork has no git tags; see vendor/README.md
+echo "1.0.0" > vendor/igraph/IGRAPH_VERSION   # the version string for the build; see vendor/README.md
 cd vendor && bash python-igraph/scripts/build_spatial.sh && cd ..
 vendor/.spatial-venv/bin/python -m pip install --no-build-isolation --no-deps networkx tqdm
 vendor/.spatial-venv/bin/python -m pip install -e .
 ```
 
 Takes ~15-20 minutes (full C+Python build and test suite); do this once per machine -
-binaries from one machine/OS don't work on another. Full details, including the exact
-build error you'd hit without the `IGRAPH_VERSION` workaround, are in
+binaries from one machine/OS don't work on another. Full details are in
 [`vendor/README.md`](vendor/README.md).
 
 ### 2. Always use that build's Python, never your regular one
 
 ```bash
 vendor/.spatial-venv/bin/python -c 'import igraph as ig; print(hasattr(ig.Graph, "edge_betweenness_spatial"))'
-# must print True - if it prints False or raises ImportError, you're using the wrong interpreter
+# must print True
 ```
 
-Every command below uses `vendor/.spatial-venv/bin/python`, not plain `python3`. Stock
-PyPI `igraph` doesn't have `edge_betweenness_spatial`; calling `--function betweenness` with it raises a clear
-`RuntimeError` rather than silently falling back to something else.
+Every command below uses `vendor/.spatial-venv/bin/python`, not plain `python3`; stock
+PyPI `igraph` doesn't have `edge_betweenness_spatial`.
 
 ### 3. Inspect new input before computing anything
 
@@ -262,13 +230,12 @@ graph, not an estimate of the full network).
 
 ### 5. Read the output correctly - raw DBC has no automatic length division
 
-Output is a pickled `CentralityResult` - a plain pickle of a dataclass, like every
-other output in this package, not a NumPy archive:
+Output is a pickled `CentralityResult`:
 
 ```python
 import pickle
 with open("examples/example_2/atrp_s1_sys1_0.x.spatial.pkl", "rb") as f:
-    result = pickle.load(f)  # needs graph_analysis importable, e.g. PYTHONPATH=src, with igraph imported first
+    result = pickle.load(f)  # needs graph_analysis importable, e.g. PYTHONPATH=src
 raw_gebc, raw_obc, raw_dbc = result.raw_gebc, result.raw_obc, result.raw_dbc
 obc, dbc = result.obc, result.dbc  # pair-normalized properties; dbc also length-divided IF --dbc-length was passed
 ```
@@ -278,50 +245,20 @@ apply any reference length yourself, as many times as you like, without recomput
 `result.dbc_for_length(L)` or `result.dbc_for_length(L, normalized=True)`. Passing
 `--dbc-length L` at the CLI only changes the *postprocessed* `dbc` property; `raw_dbc`
 is unaffected either way. See `vendor/python-igraph/analysis/README.md` for the full
-convention reference (normalization factors, what each field indexes, migration notes
-for files saved before this convention) - written against that package's original
-NumPy-archive field names, which map directly onto this pickle's attributes (e.g.
-`raw_GEBC_igraph`/`OBC`/`DBC` there are `result.raw_gebc`/`obc`/`dbc` here).
+convention reference (normalization factors, what each field indexes).
 
 ## Examples
 
 Each example folder has a `TUTORIAL.md` - a step-by-step walkthrough of one function on
 one network - and the outputs it produces. All three use the same file,
 `examples/data/atrp_s1_sys1_0.data` (103,149 atoms, 105,869 bonds, an ATRP network after
-removing unreacted monomer at 96% conversion; the same network as the cluster's
-`sys1/s1`).
+removing unreacted monomer at 96% conversion).
 
 | Folder | `--function` | Contents |
 |---|---|---|
 | [`examples/example_1/`](examples/example_1/TUTORIAL.md) | `topology` | strands, danglings, loops and the Scanlan-Case refinement |
 | [`examples/example_2/`](examples/example_2/TUTORIAL.md) | `betweenness` | GEBC, OBC and DBC of every bond, with the check of the native GEBC against stock igraph |
 | [`examples/example_3/`](examples/example_3/TUTORIAL.md) | `shortest-path` | the shortest paths across the periodic boundary of the network |
-
-## Reproducibility notes
-
-- **Node IDs are raw atom IDs everywhere** - the topology file's own numbering, used
-  consistently as `networkx` node labels, `igraph` vertex indices, and every strand/
-  dangling/loop/shortest-path entry. No remapping step is needed to cross-reference
-  between them.
-- **Loop identity depends on edge order, not vertex count.** A network's minimum cycle
-  basis isn't always unique; when equally-short candidate cycles tie, `igraph`'s
-  tie-breaking depends on the order edges were added, not on how many unused vertex IDs
-  the graph was padded out to (`--nvertices`, if given, is otherwise safe to omit or
-  over-specify). See `src/graph_analysis/loops.py` for the measurements behind this.
-  Likewise the shortest-path graph is built in the reference code's edge order, since
-  which of several equally short paths is returned depends on it.
-- **Shortest paths reproduce the reference code.** For a given network the lengths and
-  paths equal those of the Jackson lab code as run on the cluster, with the same
-  `buffer_images`; the differences are that paths are reported in atom IDs and in images
-  counted from image 0, and that atoms written unwrapped are handled (the reference
-  silently drops their periodic bonds). See the module docstring of
-  `src/graph_analysis/shortest_path.py`.
-- **A latent bug in the original strand-merging code was found and fixed** during this
-  package's development: `analysis_Scanlan_Case.py`'s merge loop removed items from a
-  list while iterating over it directly, silently skipping the element after any
-  removed one. On this repo's example dataset that left 13 of 4632 refined strands
-  (~0.3%) merged incompletely; aggregate crosslinker-density statistics are unaffected.
-  See `src/graph_analysis/scanlan_case.py` for details.
 
 ## Citing this work
 
@@ -339,16 +276,25 @@ If you use this code, please cite:
 > Strand-Length Dispersity. *Macromolecules* **2025**.
 > DOI: [10.1021/acs.macromol.5c01715](https://doi.org/10.1021/acs.macromol.5c01715)
 
-> Bai, X.; Ding, Z.; Qi, S.; Peng, L.; Huang, X.; Yan, D.; Man, X. Spatially Weighted
-> Betweenness Centrality for Predicting Fracture in End-Linked Polymer Networks.
-> *Macromolecules* **2026**, *59*, 10294-10303.
-> DOI: [10.1021/acs.macromol.6c00974](https://doi.org/10.1021/acs.macromol.6c00974)
+> Zhang, Z.; Krajniak, J.; Tian, Y.; Wang, S.; Mukherjee, K.; Liu, J.; Chen, W.; Ganesan, V.
+> Are Short Strands the Weak Links of Polymer Networks? Taut Paths and the Fracture Energy
+> of Polydisperse Networks. In preparation.
 
-If you use `--function shortest-path`, please also cite the method it implements:
+Optionally, depending on the functions you use:
+
+If you use the shortest paths (`--function shortest-path`), please also cite the method it
+implements:
 
 > Yu, Z.; Jackson, N. E. Shortest Paths Govern Bond Rupture in Thermoset Networks.
 > *Macromolecules* **2025**.
 > DOI: [10.1021/acs.macromol.4c02438](https://doi.org/10.1021/acs.macromol.4c02438)
+
+If you use the weighted betweenness (`--function betweenness`), please also cite:
+
+> Bai, X.; Ding, Z.; Qi, S.; Peng, L.; Huang, X.; Yan, D.; Man, X. Spatially Weighted
+> Betweenness Centrality for Predicting Fracture in End-Linked Polymer Networks.
+> *Macromolecules* **2026**, *59*, 10294-10303.
+> DOI: [10.1021/acs.macromol.6c00974](https://doi.org/10.1021/acs.macromol.6c00974)
 
 ```bibtex
 @article{zhang2025topology,
@@ -367,14 +313,10 @@ If you use `--function shortest-path`, please also cite the method it implements
   doi     = {10.1021/acs.macromol.5c01715}
 }
 
-@article{bai2026gebc,
-  title   = {Spatially Weighted Betweenness Centrality for Predicting Fracture in End-Linked Polymer Networks},
-  author  = {Bai, Xianjue and Ding, Zhaoyu and Qi, Shuanhu and Peng, Li and Huang, Xianbo and Yan, Dadong and Man, Xingkun},
-  journal = {Macromolecules},
-  year    = {2026},
-  volume  = {59},
-  pages   = {10294--10303},
-  doi     = {10.1021/acs.macromol.6c00974}
+@unpublished{zhang2026shortstrands,
+  title   = {Are Short Strands the Weak Links of Polymer Networks? Taut Paths and the Fracture Energy of Polydisperse Networks},
+  author  = {Zhang, Zidan and Krajniak, Jakub and Tian, Yuan and Wang, Siqi and Mukherjee, Krishnendu and Liu, Jun and Chen, Wei and Ganesan, Venkat},
+  note    = {In preparation}
 }
 
 @article{yu2025shortest,
@@ -383,5 +325,15 @@ If you use `--function shortest-path`, please also cite the method it implements
   journal = {Macromolecules},
   year    = {2025},
   doi     = {10.1021/acs.macromol.4c02438}
+}
+
+@article{bai2026gebc,
+  title   = {Spatially Weighted Betweenness Centrality for Predicting Fracture in End-Linked Polymer Networks},
+  author  = {Bai, Xianjue and Ding, Zhaoyu and Qi, Shuanhu and Peng, Li and Huang, Xianbo and Yan, Dadong and Man, Xingkun},
+  journal = {Macromolecules},
+  year    = {2026},
+  volume  = {59},
+  pages   = {10294--10303},
+  doi     = {10.1021/acs.macromol.6c00974}
 }
 ```

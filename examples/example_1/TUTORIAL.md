@@ -6,8 +6,7 @@ network in `examples/data/atrp_s1_sys1_0.data`. The other two examples use the s
 
 All commands run from the repository root. Without `pip install -e .`, use
 `python3 src/main.py` as below and put `src` on the path for your own scripts
-(`PYTHONPATH=src`). On a cluster, load the Python module first (see the README's note on
-import order).
+(`PYTHONPATH=src`).
 
 ## 0. What's here
 
@@ -50,7 +49,6 @@ same unrefined strands, danglings and loops in one object.
 
 ```bash
 PYTHONPATH=src python3 - <<'PY'
-import igraph                      # first, see the README
 import pickle
 with open("results.pkl", "rb") as f:
     refined = pickle.load(f)
@@ -99,9 +97,6 @@ The refined result from these files is the same as `results.pkl`. This is the wa
 a different network quickly: run `strands` and `danglings` (seconds), and only run `loops`
 (minutes, several GB) when you need it.
 
-`python3 src/main.py --function compare --file1 strands.pkl --file2 results_strands.pkl`
-prints the two entry counts as a quick check; comparing the contents needs a short script.
-
 ## 4. What each output means
 
 - **strands / danglings** - flat lists of atom-ID paths. A strand's first and last IDs are
@@ -117,21 +112,8 @@ prints the two entry counts as a quick check; comparing the contents needs a sho
   crosslinkers that carry a primary loop or dangling chains as linear units, plus the
   resulting effective-vs-total crosslinker density (`effective_crosslinker_d4/d3`,
   `all_crosslinker_d4/d3`, ...). See `src/graph_analysis/scanlan_case.py`.
-
-## 5. Notes
-
-- **Node IDs are the raw atom IDs of the data file** in every output, so a loop's atoms
-  can be matched to strand and dangling endpoints directly.
-- **Loops depend on edge order.** A minimum cycle basis is not always unique, and igraph's
-  choice among equally short cycles depends on the order the bonds were added, which is the
-  order of the Bonds section. The total loop count and the primary-loop count do not change,
-  but a few individual loops can.
-- **Older outputs.** Earlier releases found 5,138 strands here, not 5,156: their search
-  missed strands when three or more chains join the same two crosslinkers (see the main
-  README). The crosslinker densities above are the same either way.
-- **Legacy inputs.** `--format bond-list` and `--format rmc` read a bare bond table or an
-  RMC-style edge list; there is no example file for them, since the LAMMPS reader makes
-  them unnecessary here.
+- **Atom IDs** are the raw IDs of the data file in every output, so a loop's atoms can be
+  matched to strand and dangling endpoints directly.
 
 See the main [README](../../README.md) and the topology papers cited there for the
 scientific background (the Scanlan-Case criterion, what makes a crosslinker "effective").

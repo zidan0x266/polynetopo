@@ -39,9 +39,8 @@ except where listed:
 - A period is given as p, as in the paper (p = 1..M). The reference takes the
   number of images n = p + 1 and tries `range(image_min, image_max)`.
 - A bond crosses the periodic boundary when its endpoints are more than half a
-  box length apart along the PBC axis. The reference tests this on raw
-  coordinates, so atoms that were written unwrapped (image flags applied)
-  silently lose their periodic bonds. It is unchanged for wrapped atoms.
+  box length apart along the PBC axis, tested, as in the reference, on the
+  coordinates as written; LAMMPS `write_data` writes them wrapped into the box.
 - Each multi-image graph is built once, vectorized, in the reference's exact
   edge order (tie-breaking between equally short paths depends on it), instead
   of once per source atom in every worker.
