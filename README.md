@@ -2,6 +2,10 @@
   <img src="logo/polynetopo_logo.png" alt="PolyNetopo" width="640">
 </p>
 
+<p align="center">
+  <a href="https://doi.org/10.5281/zenodo.24325718"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.24325718.svg" alt="DOI 10.5281/zenodo.24325718"></a>
+</p>
+
 # PolyNetopo
 
 Topology, shortest-path and spatial betweenness analysis for crosslinked polymer
@@ -325,6 +329,12 @@ If you use this code, please cite:
 > Zhang, Z.; Krajniak, J.; Tian, Y.; Wang, S.; Mukherjee, K.; Liu, J.; Chen, W.; Ganesan, V.
 > Are Short Strands the Weak Links of Polymer Networks? Taut Paths and the Fracture Energy
 > of Polydisperse Networks. In preparation.
+
+The software itself (GitHub's "Cite this repository" gives this entry in APA and BibTeX):
+
+> Zhang, Z.; Krajniak, J.; Wang, S.; Ganesan, V. PolyNetopo: Topology, Shortest-Path and
+> Spatial Betweenness Analysis for Crosslinked Polymer Networks, version 0.4.0. Zenodo,
+> **2026**. DOI: [10.5281/zenodo.24325718](https://doi.org/10.5281/zenodo.24325718)
 
 Optionally, depending on the functions you use:
 
