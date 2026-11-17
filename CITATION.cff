@@ -3,11 +3,10 @@ message: "If you use this software, please cite it as below, and the papers list
 type: software
 title: "polynetopo: topology, shortest-path and spatial betweenness analysis for crosslinked polymer networks"
 abstract: >-
-  polynetopo analyzes the topology of crosslinked polymer networks from a LAMMPS data
-  file: the elastically effective strands, dangling chains and loops with the
-  Scanlan-Case refinement of the crosslinker density, the shortest paths that wrap
-  through the periodic box, and the geodesic,
-  orientation-weighted and distance-weighted edge betweenness of every bond.
+  polynetopo analyzes the topology of crosslinked polymer networks: the elastically
+  effective strands, dangling chains and loops with the Scanlan-Case refinement of the
+  crosslinker density, the shortest paths that wrap through the periodic box, and the
+  geodesic, orientation-weighted and distance-weighted edge betweenness of every bond.
 authors:
   - given-names: Zidan
     family-names: Zhang
@@ -36,7 +35,6 @@ keywords:
   - shortest paths
   - edge betweenness
   - fracture
-  - LAMMPS
 references:
   - type: article
     title: "Topology and Mechanical Properties of Polymer Networks Formed under Free Radical and Atom Transfer Radical Polymerizations"

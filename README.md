@@ -5,7 +5,7 @@
 # polynetopo
 
 Topology, shortest-path and spatial betweenness analysis for crosslinked polymer
-networks, from a LAMMPS data file:
+networks:
 
 <table>
   <thead>
