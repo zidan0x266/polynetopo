@@ -1,9 +1,9 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below, and the papers listed under Citing this work in the README."
 type: software
-title: "PolyNetopo: topology, shortest-path and spatial betweenness analysis for crosslinked polymer networks"
+title: "polynetopo: topology, shortest-path and spatial betweenness analysis for crosslinked polymer networks"
 abstract: >-
-  PolyNetopo analyzes the topology of crosslinked polymer networks from a LAMMPS data
+  polynetopo analyzes the topology of crosslinked polymer networks from a LAMMPS data
   file: the elastically effective strands, dangling chains and loops with the
   Scanlan-Case refinement of the crosslinker density, the shortest paths that wrap
   through the periodic box (the method of Yu and Jackson), and the geodesic,
@@ -29,10 +29,10 @@ doi: 10.5281/zenodo.24325718
 identifiers:
   - type: doi
     value: 10.5281/zenodo.24325718
-    description: "All versions of PolyNetopo (Zenodo concept DOI)"
+    description: "All versions of polynetopo (Zenodo concept DOI)"
   - type: doi
     value: 10.5281/zenodo.24325719
-    description: "PolyNetopo 0.4.0"
+    description: "polynetopo 0.4.0"
 date-released: 2026-11-17
 license: GPL-3.0-or-later
 repository-code: "https://github.com/zidan0x266/polynetopo"

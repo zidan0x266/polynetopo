@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="logo/polynetopo_logo.png" alt="PolyNetopo" width="640">
+  <img src="logo/polynetopo_logo.png" alt="polynetopo" width="640">
 </p>
 
 <p align="center">
   <a href="https://doi.org/10.5281/zenodo.24325718"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.24325718.svg" alt="DOI 10.5281/zenodo.24325718"></a>
 </p>
 
-# PolyNetopo
+# polynetopo
 
 Topology, shortest-path and spatial betweenness analysis for crosslinked polymer
 networks, from a LAMMPS data file:
@@ -332,7 +332,7 @@ If you use this code, please cite:
 
 The software itself (GitHub's "Cite this repository" gives this entry in APA and BibTeX):
 
-> Zhang, Z.; Krajniak, J.; Wang, S.; Ganesan, V. PolyNetopo: Topology, Shortest-Path and
+> Zhang, Z.; Krajniak, J.; Wang, S.; Ganesan, V. polynetopo: Topology, Shortest-Path and
 > Spatial Betweenness Analysis for Crosslinked Polymer Networks, version 0.4.0. Zenodo,
 > **2026**. DOI: [10.5281/zenodo.24325718](https://doi.org/10.5281/zenodo.24325718)
 
@@ -354,7 +354,7 @@ If you use the weighted betweenness (`--function betweenness`), please also cite
 
 ## License
 
-PolyNetopo is free software: you can redistribute it and/or modify it under the terms of
+polynetopo is free software: you can redistribute it and/or modify it under the terms of
 the GNU General Public License as published by the Free Software Foundation, either
 version 3 of the License, or (at your option) any later version; see [`LICENSE`](LICENSE).
 The in-house igraph build in `vendor/` keeps the license of igraph, the GNU General
