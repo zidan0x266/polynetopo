@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="logo/polynetopo_logo.png" alt="PolyNetopo" width="640">
+</p>
+
 # PolyNetopo
 
 Topology, shortest-path and spatial betweenness analysis for crosslinked polymer
