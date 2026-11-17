@@ -305,7 +305,7 @@ def _validate(parser: argparse.ArgumentParser, args: argparse.Namespace) -> None
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        "graph-analysis",
+        "polynetopo",
         description="Topology, shortest-path and spatial betweenness analysis for crosslinked polymer networks",
     )
     parser.add_argument(

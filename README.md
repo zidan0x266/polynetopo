@@ -36,7 +36,7 @@ networks, from a LAMMPS data file:
 
 This code produced the analysis in the three papers listed first under
 [Citing this work](#citing-this-work). Its shortest-path analysis implements the method of
-Yu & Jackson, ported from the authors' code
+Yu & Jackson in our own code, which gives the same paths as the authors' code
 ([TheJacksonLab/shortest_path_thermoset](https://github.com/TheJacksonLab/shortest_path_thermoset)),
 and its betweenness analysis computes the spatially weighted betweenness of Bai et al.
 It is built on `networkx` and `igraph`; the betweenness analysis needs the in-house
@@ -146,11 +146,24 @@ below.
 ## Installation
 
 Requires Python >= 3.10 with `networkx` (>= 3.0), `numpy`, `igraph` (the `python-igraph`
-package) and `tqdm`. Install with `pip install -e .`, or skip the install and run
+package) and `tqdm`. Install with `pip install -e .`, which provides the `polynetopo`
+command (the Python package is imported as `graph_analysis`), or skip the install and run
 `python3 src/main.py` from the repository root, which works without it.
 `--function betweenness` additionally needs the in-house igraph build in `vendor/` - see
 [`vendor/README.md`](vendor/README.md) and the section below. That build is a superset
 of stock igraph, so one environment can run every function.
+
+## Tests
+
+```bash
+pip install -e ".[test]"
+python3 -m pytest
+```
+
+The tests take about a second. Those of `--function betweenness` need the in-house igraph
+build and are skipped without it; to run them, use that build's Python
+(`vendor/.spatial-venv/bin/python -m pip install pytest`, then
+`vendor/.spatial-venv/bin/python -m pytest`).
 
 ## Quick start
 
@@ -197,6 +210,7 @@ src/graph_analysis/
     betweenness.py    SpatialBetweennessAnalysis - native GEBC/OBC/DBC (needs vendor/)
     cli.py            command-line entry point (--function topology/shortest-path/betweenness)
 examples/           data/ plus example_1, example_2, example_3 (see below)
+tests/              pytest suite (see Tests)
 vendor/
     igraph/           git submodule: in-house igraph C core (spatial-betweenness-1.0.0)
     python-igraph/    git submodule: in-house Python bindings (same branch)
@@ -369,3 +383,11 @@ If you use the weighted betweenness (`--function betweenness`), please also cite
   doi     = {10.1021/acs.macromol.6c00974}
 }
 ```
+
+## License
+
+PolyNetopo is free software: you can redistribute it and/or modify it under the terms of
+the GNU General Public License as published by the Free Software Foundation, either
+version 3 of the License, or (at your option) any later version; see [`LICENSE`](LICENSE).
+The in-house igraph build in `vendor/` keeps the license of igraph, the GNU General
+Public License, version 2 or later.

@@ -1,6 +1,7 @@
 # Polymer network topology, shortest-path and betweenness analysis
 
-A single CLI (`graph_analysis.cli`, exposed here as `main.py`) covering the
+A single CLI (`graph_analysis.cli`, exposed here as `main.py` and, after `pip install`,
+as the `polynetopo` command) covering the
 crosslinked-network analysis pipeline: elastically effective strands, dangling
 chains, primary/higher-order loops, Scanlan-Case crosslinker density refinement
 (used for the ATRP/FRP network papers), shortest paths across the periodic boundary
@@ -109,9 +110,10 @@ nested-list form `[[refined...], [raw...], [counts...]]`.
 ## `--function shortest-path`
 
 The method of Yu & Jackson, "Shortest Paths Govern Bond Rupture in Thermoset Networks"
-(Macromolecules 2025), from the authors' code. For each period p = 1..M it builds a
-graph of p + 1 periodic images (plus `--buffer-images` on each side), finds for every
-atom the shortest path from itself in image 0 to itself in image p, and records its
+(Macromolecules 2025), in our own code, which gives the same paths as the authors' code.
+For each period p = 1..M it builds a graph of p + 1 periodic images (plus
+`--buffer-images` on each side), finds for every atom the shortest path from itself in
+image 0 to itself in image p, and records its
 length divided by p: **D^g = edges / p**. The README's "What it does" section gives the
 definitions of valid paths and of Cases 1, 2 and 3.
 

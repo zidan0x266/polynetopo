@@ -31,9 +31,9 @@ wraps the box twice, has its first valid path at a larger p. The first
 (shortest) SP predicts where the first bond breaks and, through D^g_min / L0,
 the strain at which it breaks.
 
-Port notes - behaviour matches the reference implementation (the Jackson lab's
-shortest_path_thermoset code as run on the cluster, with `buffer_images`)
-except where listed:
+This module is our own code. It gives the same paths as the reference
+implementation (the Jackson lab's shortest_path_thermoset, with
+`buffer_images`), from which it differs as follows:
 
 - Input comes from `lammps.LammpsDataReader`, so the box, coordinates and
   bonds are validated once, in one place, and atom IDs may be nonconsecutive.
