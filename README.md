@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="logo/polynetopo_logo.png" alt="polynetopo" width="640">
+  <img src="logo/polynetopo_logo.png?raw=true" alt="polynetopo" width="640">
 </p>
 
 # polynetopo
