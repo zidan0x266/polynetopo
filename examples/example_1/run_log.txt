@@ -1,35 +1,27 @@
-2026-10-22 14:54:07,374 - graph_analysis - INFO - Loaded PolymerNetwork(nodes=103149, edges=105869)
-2026-10-22 14:54:07,607 - graph_analysis.crosslink - INFO - Found 5156 crosslinkers paths
-2026-10-22 14:54:07,804 - graph_analysis.crosslink - INFO - Found 395 danglings paths
-2026-10-22 15:00:25,639 - graph_analysis.pipeline - INFO - Found 5156 strands, 395 danglings, 2721 loops
-2026-10-22 15:00:25,708 - graph_analysis.scanlan_case - INFO - Step 1 completed
-2026-10-22 15:00:26,522 - graph_analysis.scanlan_case - INFO - Step 2 completed
-2026-10-22 15:00:27,988 - graph_analysis.scanlan_case - INFO - Step 3 completed
-2026-10-22 15:00:27,988 - graph_analysis.scanlan_case - INFO - Step 4 completed
-2026-10-22 15:00:28,024 - graph_analysis - INFO - Wrote refined result to examples/example_1/results.pkl
-2026-10-22 15:00:28,040 - graph_analysis - INFO - Wrote strands to examples/example_1/results_strands.pkl
-2026-10-22 15:00:28,042 - graph_analysis - INFO - Wrote danglings to examples/example_1/results_danglings.pkl
-2026-10-22 15:00:28,050 - graph_analysis - INFO - Wrote loops to examples/example_1/results_loops.pkl
-	Command being timed: "python3 src/main.py --function topology --input-file examples/data/atrp_s1_sys1_0.data --output-file examples/example_1/results.pkl"
-	User time (seconds): 369.45
-	System time (seconds): 12.95
-	Percent of CPU this job got: 99%
-	Elapsed (wall clock) time (h:mm:ss or m:ss): 6:23.03
-	Average shared text size (kbytes): 0
-	Average unshared data size (kbytes): 0
-	Average stack size (kbytes): 0
-	Average total size (kbytes): 0
-	Maximum resident set size (kbytes): 10401060
-	Average resident set size (kbytes): 0
-	Major (requiring I/O) page faults: 0
-	Minor (reclaiming a frame) page faults: 10272668
-	Voluntary context switches: 935
-	Involuntary context switches: 1735
-	Swaps: 0
-	File system inputs: 0
-	File system outputs: 0
-	Socket messages sent: 0
-	Socket messages received: 0
-	Signals delivered: 0
-	Page size (bytes): 4096
-	Exit status: 0
+2026-11-17 15:04:08,559 - graph_analysis - INFO - Loaded PolymerNetwork(nodes=103149, edges=105869)
+2026-11-17 15:04:08,673 - graph_analysis.crosslink - INFO - Found 5156 crosslinkers paths
+2026-11-17 15:04:08,770 - graph_analysis.crosslink - INFO - Found 395 danglings paths
+2026-11-17 15:05:39,785 - graph_analysis.pipeline - INFO - Found 5156 strands, 395 danglings, 2721 loops
+2026-11-17 15:05:40,055 - graph_analysis.scanlan_case - INFO - Load-bearing component: 92442 atoms, 2402 effective crosslinkers; 4606 strands, 92 moved to the danglings
+2026-11-17 15:05:40,077 - graph_analysis - INFO - Wrote refined result to examples/example_1/results.pkl
+2026-11-17 15:05:40,079 - graph_analysis - INFO - Wrote strands to examples/example_1/results_strands.pkl
+2026-11-17 15:05:40,079 - graph_analysis - INFO - Wrote danglings to examples/example_1/results_danglings.pkl
+2026-11-17 15:05:40,081 - graph_analysis - INFO - Wrote loops to examples/example_1/results_loops.pkl
+       92.54 real        84.84 user         7.07 sys
+          8843100160  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+             3728046  page reclaims
+                  18  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                 676  voluntary context switches
+                9810  involuntary context switches
+        992567854161  instructions retired
+        343131502132  cycles elapsed
+         12198142976  peak memory footprint

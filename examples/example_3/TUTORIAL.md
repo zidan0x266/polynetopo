@@ -105,7 +105,8 @@ Expected: `3321 155.0`, then the smallest D^g per period
   several periods.
 - `--keep-redundant`: skip the removal of redundant paths (the paper's Cases 1 and 2).
 - `--slice-max L`, `--ncpus N`, `--checkpoint-file F`: start paths from a thin slice, use
-  worker processes, and save progress after each period so an interrupted run resumes.
+  worker processes, and save progress after each period so an interrupted run resumes (the
+  checkpoint is deleted when the search completes).
 
 ## 5. Notes
 

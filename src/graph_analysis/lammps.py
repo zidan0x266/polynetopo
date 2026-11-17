@@ -59,6 +59,8 @@ class LammpsNetwork:
     Coordinate rows follow sorted ``atom_ids``. ``edges`` contains zero-based
     indices into those rows. Bond arrays retain their original file order.
     Arrays are copied and made read-only so analysis cannot silently alter input.
+    ``source`` is the resolved input path as a string, so that pickled results
+    load under any Python version.
     """
 
     atom_ids: IntArray
@@ -67,7 +69,7 @@ class LammpsNetwork:
     bond_types: IntArray
     edges: IntArray
     box_bounds: FloatArray
-    source: Path | None = None
+    source: str | None = None
 
     def __post_init__(self) -> None:
         for name in ("atom_ids", "bond_ids", "bond_types", "edges"):
@@ -93,7 +95,7 @@ class LammpsNetwork:
         if not np.isfinite(self.box_lengths).all() or np.any(self.box_lengths <= 0):
             raise ValueError("Box lengths must be finite and strictly positive")
         if self.source is not None:
-            object.__setattr__(self, "source", Path(self.source).resolve())
+            object.__setattr__(self, "source", str(Path(self.source).resolve()))
         for name in ("atom_ids", "coordinates", "bond_ids", "bond_types", "edges", "box_bounds"):
             getattr(self, name).setflags(write=False)
 

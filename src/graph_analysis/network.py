@@ -45,10 +45,7 @@ class PolymerNetwork:
         masses, etc.) isn't needed for topology analysis. If you have an
         already-trimmed bare bond table instead, use `from_bond_list`.
         """
-        edges = _read_lammps_data_bonds_section(path)
-        graph = nx.Graph()
-        graph.add_edges_from(edges)
-        return cls(graph, edges)
+        return cls._from_edges(_read_lammps_data_bonds_section(path), path)
 
     @classmethod
     def from_bond_list(cls, path: str | Path) -> "PolymerNetwork":
@@ -62,26 +59,28 @@ class PolymerNetwork:
         different tool (e.g. a reactive Monte Carlo / 3DBFM code) that isn't
         LAMMPS-shaped, if its column layout differs from this one.
         """
-        edges = _read_bond_table(path)
-        graph = nx.Graph()
-        graph.add_edges_from(edges)
-        return cls(graph, edges)
+        return cls._from_edges(_read_bond_table(path), path)
 
     @classmethod
     def from_rmc(cls, path: str | Path) -> "PolymerNetwork":
         """Legacy: load a graph from an RMC-style whitespace edge list.
 
         Each line holds an even number of atom ids; consecutive pairs are
-        edges. Only one direction of each unordered pair is kept.
+        edges. A bond may be listed in both directions or in one: of a pair
+        listed both ways only the direction with the lower ID first is kept.
         """
-        edges: list[tuple[int, int]] = []
+        pairs: list[tuple[int, int]] = []
         with open(path) as data_file:
             for line in data_file:
-                ids = line.split()
-                atom_a, atom_b = ids[::2], ids[1::2]
-                edges.extend(
-                    (int(a), int(b)) for a, b in zip(atom_a, atom_b) if int(a) < int(b)
-                )
+                ids = [int(value) for value in line.split()]
+                pairs.extend(zip(ids[::2], ids[1::2]))
+        listed = set(pairs)
+        edges = [(a, b) for a, b in pairs if a <= b or (b, a) not in listed]
+        return cls._from_edges(edges, path)
+
+    @classmethod
+    def _from_edges(cls, edges: list[tuple[int, int]], path: str | Path) -> "PolymerNetwork":
+        _require_simple(edges, path)
         graph = nx.Graph()
         graph.add_edges_from(edges)
         return cls(graph, edges)
@@ -102,8 +101,27 @@ class PolymerNetwork:
         return f"PolymerNetwork(nodes={self.graph.number_of_nodes()}, edges={self.graph.number_of_edges()})"
 
 
+def _require_simple(edges: list[tuple[int, int]], path: str | Path) -> None:
+    """Reject a bond from an atom to itself or an atom pair bonded more than once."""
+    seen: set[tuple[int, int]] = set()
+    repeated: list[tuple[int, int]] = []
+    for a, b in edges:
+        if a == b:
+            raise ValueError(f"{path}: atom {a} is bonded to itself")
+        pair = (a, b) if a < b else (b, a)
+        if pair in seen:
+            repeated.append(pair)
+        seen.add(pair)
+    if repeated:
+        a, b = repeated[0]
+        raise ValueError(
+            f"{path}: {len(repeated)} atom pairs are bonded more than once (first: {a} and {b}); "
+            "a strand lists atoms, so it cannot tell parallel bonds apart"
+        )
+
+
 def _read_bond_table(path: str | Path) -> list[tuple[int, int]]:
-    data = np.loadtxt(path)
+    data = np.loadtxt(path, ndmin=2)
     return [(int(atom_i), int(atom_j)) for atom_i, atom_j in data[:, (2, 3)]]
 
 

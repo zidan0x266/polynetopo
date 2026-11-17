@@ -21,10 +21,10 @@ example network `../examples/data/atrp_s1_sys1_0.data`.
 | `--output-file` | all | output pickle; each function's default is given below |
 | `--format` | topology | `lammps` (default), `bond-list`, `rmc` (see below) |
 | `--direction {x,y,z,0,1,2}` | betweenness, shortest-path | betweenness: the loading axis OBC weights against; shortest-path: the periodic axis the paths wrap along (default `x`) |
-| `--overwrite` | betweenness, shortest-path | replace an existing output file |
+| `--overwrite` | topology, shortest-path, betweenness | replace existing output files (without it, an existing file stops the run) |
 | `--stage` | topology | `full` (default), `strands`, `danglings`, `loops`, `scanlan-case` |
 | `--raw` | topology | also write the pre-refinement result (`full`, `scanlan-case`) |
-| `--nvertices N` | topology | number of nodes; inferred if omitted |
+| `--nvertices N` | topology | largest atom ID (not the number of atoms); inferred if omitted |
 | `--strands-file`, `--danglings-file`, `--loops-file` | topology `scanlan-case` | the three files it refines |
 | `--max-period M` | shortest-path | search periods p = 1..M (default 8, the paper's M) |
 | `--buffer-images N` | shortest-path | extra images on each side (default 1) |
@@ -70,7 +70,9 @@ It writes, next to each other:
 - with `--raw`, `results_raw.pkl` - a `graph_analysis.NetworkStats`: the pre-refinement
   strands/danglings/loops in one object.
 
-`--nvertices` is optional - if omitted it's inferred from the topology.
+`--nvertices` is optional - if omitted it's inferred from the topology. It is the largest atom
+ID, since the loop search uses atom IDs as vertex IDs, not the number of atoms. An existing
+output file stops the run unless `--overwrite` is given.
 
 ### Single stages
 
@@ -98,7 +100,7 @@ python3 main.py --function compare --file1 strands.pkl --file2 danglings.pkl
 `--stage loops` takes only `--input-file`, `--output-file`, and the optional `--format`
 and `--nvertices`; it has no options controlling the search itself (it calls igraph's
 `minimum_cycle_basis()`). In a full run on the 103,149-atom example, on a laptop, the
-loop search took about 2.4 minutes and the whole process peaked near 8.6 GB.
+loop search took about 1.5 minutes and the whole process peaked near 8.6 GB.
 
 `Scanlan_Case.pkl`/`results.pkl` pickle a `graph_analysis.RefinedStats` dataclass; call
 `.to_legacy()` on the `ScanlanCaseAnalyzer.run()` return value (before pickling) for the
@@ -124,7 +126,8 @@ python3 main.py --function shortest-path \
 - `--buffer-images N` (default 1): extra images on each side, so a path can leave the
   stack between its ends; `0` keeps every path inside it.
 - `--slice-max L`: start paths only from atoms within L of the box's low face along
-  `--direction`. This reduces cost; a quick trial is `--slice-max 1.0 --max-period 2`.
+  `--direction`. This reduces cost and keeps only the SPs found from these atoms; a quick
+  trial is `--slice-max 1.0 --max-period 2`.
 - `--keep-redundant`: skip the removal of redundant paths (Cases 1 and 2).
 - `--min-sp-only`: also apply Case 3, keeping only the shortest SP of each start atom
   (ties go to the first; the result is ordered by start atom). Off by default.
@@ -132,7 +135,8 @@ python3 main.py --function shortest-path \
 - `--checkpoint-file F`: write progress after each period; rerunning the same command
   resumes after the last finished period. `--max-period` and the redundancy options may
   differ between runs, the network, direction, `--buffer-images` and `--slice-max` may
-  not.
+  not (a changed network is recognized by its content, not its file name). The file is
+  deleted when the search completes.
 - `--output-file` (default `<input>.<axis>.sp.pkl`); `--overwrite` to replace it.
 
 The input may not contain an atom pair bonded twice or an atom bonded to itself; this

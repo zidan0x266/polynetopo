@@ -56,10 +56,13 @@ table / RMC-style edge list (`--format bond-list` / `rmc`) - it identifies:
   topological defects that don't bear load.
 - **Loops** - the network's minimum cycle basis, with a crosslinker count per loop.
   A loop with exactly one crosslinker on it is a *primary loop*.
-- **Scanlan-Case-refined crosslinker density** - reclassifies crosslinkers that carry a
-  primary loop or dangling chain(s) as linear units rather than real network junctions,
-  folding their strands/danglings together and recomputing effective vs. total
-  crosslinker counts.
+- **Scanlan-Case-refined crosslinker density** - keeps the load-bearing part of the
+  network, its largest biconnected component, without everything that hangs on it through
+  a single strand or a single crosslinker (dangling chains, primary loops and dangling
+  clusters). A crosslinker that carries a primary loop or dangling chain(s) thus becomes an
+  f=3 junction or a linear unit, the strands meeting at a linear unit are spliced into one,
+  the strands that lead only to a dead end join the dangling chains, and the effective
+  vs. total crosslinker counts are recomputed.
 
 `--stage` picks what runs:
 
@@ -271,6 +274,10 @@ apply any reference length yourself, as many times as you like, without recomput
 `--dbc-length L` at the CLI only changes the *postprocessed* `dbc` property; `raw_dbc`
 is unaffected either way. See `vendor/python-igraph/analysis/README.md` for the full
 convention reference (normalization factors, what each field indexes).
+
+OBC and DBC weight each source-target pair by its minimum-image displacement, whereas the
+shortest path between the two atoms on the periodic graph may end on another image of the
+target; this happens more often the longer the path is compared with the box.
 
 ## Examples
 

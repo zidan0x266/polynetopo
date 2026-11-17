@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Convenience entry point: `python3 main.py <command> ...` without installing the package.
+"""Convenience entry point: `python3 main.py --function <name> ...` without installing the package.
 
 See `graph_analysis.cli` for the actual implementation and `python3 main.py --help`
-for the available subcommands.
+for the available functions and options.
 """
 
 import sys

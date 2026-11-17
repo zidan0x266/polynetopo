@@ -17,7 +17,11 @@ The input is a `lammps.LammpsNetwork` (atom IDs, coordinates, box bounds), not t
 deliberately not re-exported from the top-level `graph_analysis` package. Import it
 explicitly: `from graph_analysis.betweenness import SpatialBetweennessAnalysis`.
 
-One native, single-threaded GEBC/OBC/DBC traversal runs per analysis.
+One native, single-threaded GEBC/OBC/DBC traversal runs per analysis. OBC and DBC
+weight each source-target pair by its minimum-image displacement, while the
+shortest path between the two atoms on the periodic graph may end on another
+periodic image of the target; this happens more often the longer the path is
+compared with the box.
 """
 
 from __future__ import annotations
@@ -27,7 +31,7 @@ import pickle
 import platform
 import tempfile
 from dataclasses import asdict, dataclass
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from numbers import Real
 from pathlib import Path
 from time import perf_counter
@@ -177,7 +181,7 @@ class CentralityResult:
         output = Path(path).expanduser().resolve()
         if output.suffix != ".pkl":
             raise ValueError("Output filename must end in .pkl")
-        if self.network.source == output:
+        if self.network.source is not None and Path(self.network.source) == output:
             raise ValueError("Output file must not replace the input LAMMPS file")
         if not overwrite and output.exists():
             raise FileExistsError(f"Output already exists: {output}")
@@ -187,6 +191,10 @@ class CentralityResult:
             with tempfile.NamedTemporaryFile(dir=output.parent, prefix=f".{output.name}.", delete=False) as stream:
                 temporary = Path(stream.name)
                 pickle.dump(self, stream, protocol=pickle.HIGHEST_PROTOCOL)
+            # NamedTemporaryFile creates the file private (0600); give it the mode open() would.
+            umask = os.umask(0)
+            os.umask(umask)
+            os.chmod(temporary, 0o666 & ~umask)
             os.replace(temporary, output)
             temporary = None
         finally:
@@ -278,11 +286,11 @@ class SpatialBetweennessAnalysis:
         """Compute raw channels and optionally check GEBC before returning results."""
         native = getattr(self._graph, "edge_betweenness_spatial", None)
         if not callable(native):
-            raise RuntimeError("The modified igraph build is required. Use .spatial-venv/bin/python or run bash python-igraph/scripts/build_spatial.sh first.")
+            raise RuntimeError("The modified igraph build is required. Use vendor/.spatial-venv/bin/python, or build it first: cd vendor && bash python-igraph/scripts/build_spatial.sh (see vendor/README.md).")
         if getattr(ig._igraph, "SPATIAL_DBC_WEIGHT", None) != "distance":
-            raise RuntimeError("The native DBC convention is outdated. Rebuild both libraries with bash python-igraph/scripts/build_spatial.sh before using distance-only raw DBC.")
+            raise RuntimeError("The native DBC convention is outdated. Rebuild both libraries (cd vendor && bash python-igraph/scripts/build_spatial.sh) before using distance-only raw DBC.")
         metadata = self.inspect()
-        metadata["started_at_utc"] = datetime.now(UTC).isoformat()
+        metadata["started_at_utc"] = datetime.now(timezone.utc).isoformat()
         start = perf_counter()
         raw_gebc, raw_obc, raw_dbc = [np.asarray(values, dtype=np.float64) for values in native(self.network.coordinates, self.network.box_lengths, int(self.config.direction))]
         metadata["spatial_seconds"] = perf_counter() - start

@@ -16,8 +16,8 @@ All commands run from the repository root. Without `pip install -e .`, use
 - `results.pkl` - the refined result (a `graph_analysis.RefinedStats`).
 - `results_strands.pkl`, `results_danglings.pkl`, `results_loops.pkl` - the three raw
   stages, written by the same run so the refinement can be redone without the loop search.
-- `run_log.txt` - the log and `/usr/bin/time -v` report of the cluster run that produced
-  these files.
+- `run_log.txt` - the log and `/usr/bin/time -l` report of the run (on a laptop) that
+  produced these files.
 
 ## 1. One command
 
@@ -39,8 +39,8 @@ cycle basis) is nearly all of the time and of the memory:
 
 | | wall time | peak memory |
 |---|---|---|
-| cluster node, one core (`run_log.txt`) | 6 min 23 s | 10.4 GB |
-| laptop | 2 min 24 s | 8.6 GB |
+| cluster node, one core | 6 min 23 s | 10.4 GB |
+| laptop (`run_log.txt`) | 1 min 33 s | 8.6 GB |
 
 Add `--raw` to also write `results_raw.pkl`, a `graph_analysis.NetworkStats` holding the
 same unrefined strands, danglings and loops in one object.
@@ -63,18 +63,22 @@ PY
 Expected:
 
 ```
-effective_crosslinker_d4 2025
-effective_crosslinker_d3 401
+effective_crosslinker_d4 2006
+effective_crosslinker_d3 396
 all_crosslinker_d4 2903
 all_crosslinker_d3 29
-correct_crosslinker_d4 878
-correct_crosslinker_d3 -372
-switched_crosslinker_d4 377
-refined: 4650 strands, 398 danglings, 2721 loops
+correct_crosslinker_d4 897
+correct_crosslinker_d3 -367
+switched_crosslinker_d4 372
+refined: 4606 strands, 487 danglings, 2721 loops
 ```
 
 Before the refinement there are 5,156 strands and 395 danglings; of the 2,721 loops, 496
-have exactly one crosslinker on them (primary loops).
+have exactly one crosslinker on them (primary loops). The load-bearing part of the network
+holds 92,442 of the 103,149 atoms and 4,606 strands; the other 92 strands lead only to a dead
+end and join the dangling chains (395 + 92 = 487). `correct_crosslinker_d4/d3` are all minus
+effective, so `correct_crosslinker_d3` is negative: more f=4 crosslinkers become f=3
+junctions (372, `switched_crosslinker_d4`) than f=3 crosslinkers become linear units.
 
 ## 3. One stage at a time
 
@@ -101,17 +105,23 @@ a different network quickly: run `strands` and `danglings` (seconds), and only r
 
 - **strands / danglings** - flat lists of atom-ID paths. A strand's first and last IDs are
   crosslinkers (degree >= 3) and every atom between them has degree 2; the lower ID comes
-  first. A dangling chain runs from a crosslinker to a free chain end (degree == 1).
+  first. A dangling chain joins a crosslinker to a free chain end (degree == 1); it is listed
+  the same way, from the lower ID, so either end may come first.
   Several parallel chains between the same two crosslinkers are separate strands, and a
   direct bond between two crosslinkers is a strand of two atoms (360 here).
 - **loops** - `[loops, crosslinker_counts]`: `loops[i]` is the member atoms of one
   independent smallest ring, `crosslinker_counts[i]` how many of them are crosslinkers.
   A count of 1 is a *primary loop*, a dead-end ring off a single junction - a defect, not a
   load path.
-- **`results.pkl`** - the refined strands, danglings and loops after reclassifying
-  crosslinkers that carry a primary loop or dangling chains as linear units, plus the
-  resulting effective-vs-total crosslinker density (`effective_crosslinker_d4/d3`,
-  `all_crosslinker_d4/d3`, ...). See `src/graph_analysis/scanlan_case.py`.
+- **`results.pkl`** - the refined strands, danglings and loops, plus the resulting
+  effective-vs-total crosslinker density (`effective_crosslinker_d4/d3`,
+  `all_crosslinker_d4/d3`, ...). The refined strands are those of the load-bearing part of
+  the network, its largest biconnected component (everything that hangs on it through a
+  single strand or a single crosslinker is left out), with the strands that meet at a
+  crosslinker left with two bonds in it, a linear unit, spliced into one; every other strand
+  is added to the dangling chains. `effective_functionality` maps each effective crosslinker
+  to its number of bonds in that component. A loop keeps order 1 if it is a primary loop and
+  otherwise counts the effective crosslinkers on it. See `src/graph_analysis/scanlan_case.py`.
 - **Atom IDs** are the raw IDs of the data file in every output, so a loop's atoms can be
   matched to strand and dangling endpoints directly.
 

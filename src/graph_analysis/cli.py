@@ -142,7 +142,20 @@ _TOPOLOGY_STAGES = {
 }
 
 
+def _topology_outputs(args: argparse.Namespace) -> list[Path]:
+    """Every file a topology stage writes."""
+    outputs = [Path(args.output_file)]
+    if args.stage == "full":
+        outputs += [_sibling_path(args.output_file, suffix) for suffix in ("strands", "danglings", "loops")]
+    if args.raw and args.stage in ("full", "scanlan-case"):
+        outputs.append(_sibling_path(args.output_file, "raw"))
+    return outputs
+
+
 def _topology(args: argparse.Namespace) -> None:
+    existing = [str(path) for path in _topology_outputs(args) if path.exists()]
+    if existing and not args.overwrite:
+        raise FileExistsError(f"Output already exists; use --overwrite or --output-file: {', '.join(existing)}")
     _TOPOLOGY_STAGES[args.stage](args)
 
 
@@ -227,7 +240,7 @@ def _betweenness(args: argparse.Namespace) -> None:
     ).expanduser().resolve()
     if output.suffix != ".pkl":
         raise ValueError("Output filename must end in .pkl")
-    if analysis.network.source == output:
+    if analysis.network.source is not None and Path(analysis.network.source) == output:
         raise ValueError("Output file must not replace the input LAMMPS file")
     if not args.overwrite and output.exists():
         raise FileExistsError(f"Output already exists; use --overwrite or --output-file: {output}")
@@ -314,8 +327,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     common.add_argument(
         "--nvertices", type=int, default=None,
-        help="(topology stage=full/loops) Number of nodes in the system; inferred from the "
-        "topology if omitted",
+        help="(topology stage=full/loops) Largest atom ID (the loop search uses atom IDs as "
+        "vertex IDs, so this is not the number of atoms); inferred from the topology if omitted",
     )
 
     topology = parser.add_argument_group("--function topology")
@@ -343,7 +356,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="(betweenness) loading axis; (shortest-path) periodic axis the paths wrap along (default: x)",
     )
     common.add_argument(
-        "--overwrite", action="store_true", help="(betweenness, shortest-path) Replace existing output files"
+        "--overwrite", action="store_true", help="Replace existing output files (default: stop if one exists)"
     )
 
     shortest_path = parser.add_argument_group("--function shortest-path")
@@ -359,7 +372,7 @@ def build_parser() -> argparse.ArgumentParser:
     shortest_path.add_argument(
         "--slice-max", type=float, metavar="L",
         help="Only start paths from atoms within L of the box's low face along --direction "
-        "(default: every atom); reduces cost",
+        "(default: every atom); reduces cost, and keeps only the SPs found from those atoms",
     )
     shortest_path.add_argument(
         "--keep-redundant", action="store_true", help="Skip the removal of redundant paths (Cases 1 and 2)"
@@ -373,7 +386,8 @@ def build_parser() -> argparse.ArgumentParser:
     )
     shortest_path.add_argument(
         "--checkpoint-file", type=Path,
-        help="Save progress after each period here and resume from it if it exists",
+        help="Save progress after each period here and resume from it if it exists; "
+        "deleted when the search completes",
     )
 
     betweenness = parser.add_argument_group("--function betweenness")

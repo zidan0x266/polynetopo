@@ -2,19 +2,31 @@
 
 Per the Scanlan-Case criterion (Zhang et al. 2025, *Macromolecules*,
 "Topology and Mechanical Properties of Polymer Networks Formed under Free
-Radical and Atom Transfer Radical Polymerizations"): a crosslinker of
-functionality f=4 that carries a primary loop or two dangling chains isn't
-actually load-bearing, and is reclassified as a linear unit; a crosslinker
-of f=3 that carries a primary loop or a dangling chain is reclassified as a
-linear unit, folded into whichever dangling chain or strand runs through it.
-This module reclassifies the raw strands/danglings/loops accordingly and
-recomputes the effective crosslinker density.
+Radical and Atom Transfer Radical Polymerizations"), a crosslinker is
+elastically effective only if at least three of its arms lead to the network
+independently of one another. For a single defect this means: a crosslinker
+of functionality f=4 that carries a primary loop or two dangling chains is a
+linear unit, and one that carries one dangling chain is an f=3 junction; a
+crosslinker of f=3 that carries a primary loop or a dangling chain is a
+linear unit, folded into whichever strand runs through it.
+
+The criterion is applied to the whole network at once, so that defects that
+build on each other are included as well (a strand that leads only to a dead
+end is itself dangling, and the crosslinker at its other end loses an arm):
+the load-bearing part of the network is its largest biconnected component,
+i.e., the network without everything that hangs on it through a single strand
+or a single crosslinker - dangling chains, primary loops, and clusters of
+crosslinkers that lead only to a dead end. The effective functionality of a
+crosslinker is its number of bonds inside that component. This module
+reclassifies the raw strands/danglings/loops accordingly and recomputes the
+effective crosslinker density.
 """
 
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from collections import Counter, defaultdict
+from dataclasses import dataclass, field
 
 import networkx as nx
 
@@ -30,6 +42,14 @@ def merge_strands(node: int, strand_a: Strand, strand_b: Strand) -> Strand:
     a = strand_a if strand_a[-1] == node else strand_a[::-1]
     b = strand_b if strand_b[0] == node else strand_b[::-1]
     return a + b[1:]
+
+
+def load_bearing_core(graph: nx.Graph) -> set[int]:
+    """Atoms of the largest biconnected component, or none if it has no crosslinker of degree >= 3 in it."""
+    core = max(nx.biconnected_components(graph), key=len, default=set())
+    if not any(sum(1 for n in graph.adj[node] if n in core) >= 3 for node in core):
+        return set()
+    return core
 
 
 @dataclass(slots=True)
@@ -55,7 +75,16 @@ class NetworkStats:
 
 @dataclass(slots=True)
 class RefinedStats(NetworkStats):
-    """`NetworkStats` after Scanlan-Case refinement, plus the crosslinker density it produced."""
+    """`NetworkStats` after Scanlan-Case refinement, plus the crosslinker density it produced.
+
+    `effective_crosslinker_d4/d3` count the crosslinkers of effective functionality
+    4 and 3, `all_crosslinker_d4/d3` the atoms of degree 4 and 3, and
+    `correct_crosslinker_d4/d3` = all - effective, the correction to each count;
+    `correct_crosslinker_d3` is negative when more f=4 crosslinkers become f=3
+    junctions (`switched_crosslinker_d4`) than f=3 crosslinkers become linear units.
+    `effective_functionality` maps every effective crosslinker to its effective
+    functionality, including any above 4.
+    """
 
     effective_crosslinker_d4: int = 0
     effective_crosslinker_d3: int = 0
@@ -64,6 +93,7 @@ class RefinedStats(NetworkStats):
     correct_crosslinker_d4: int = 0
     correct_crosslinker_d3: int = 0
     switched_crosslinker_d4: int = 0
+    effective_functionality: dict[int, int] = field(default_factory=dict)
 
 
 @dataclass(slots=True)
@@ -91,122 +121,95 @@ class ScanlanCaseResult:
 
 
 class ScanlanCaseAnalyzer:
-    """Applies the Scanlan-Case criterion to a network's strands/danglings/loops."""
+    """Applies the Scanlan-Case criterion to a network's strands/danglings/loops.
+
+    The refined strands are the raw strands inside the load-bearing component,
+    with the strands that meet at a crosslinker of effective functionality 2 (a
+    linear unit) spliced into one; every other raw strand is added to the
+    dangling chains, so each raw strand ends up in exactly one of the two
+    lists. A loop keeps order 1 if it is a primary loop and otherwise counts
+    the effective crosslinkers on it.
+    """
 
     def __init__(self, graph: nx.Graph, raw: NetworkStats) -> None:
         self.graph = graph
         self.raw = raw
 
     def run(self) -> ScanlanCaseResult:
-        graph = self.graph
-        strands, danglings = self.raw.strands, self.raw.danglings
-        loop_nodes, loop_orders = self.raw.loops, self.raw.loop_orders
+        graph, raw = self.graph, self.raw
 
-        refined_strands = strands.copy()
-        refined_danglings = danglings.copy()
+        # Load-bearing component and the effective functionality inside it.
+        core = load_bearing_core(graph)
+        core_degree = {node: sum(1 for n in graph.adj[node] if n in core) for node in core}
+        functionality = {node: degree for node, degree in core_degree.items() if degree >= 3}
+        linear = {node for node, degree in core_degree.items() if degree == 2 and graph.degree(node) >= 3}
 
-        # Step 0: crosslinkers present in the raw topology.
-        crosslinkers_d3 = [node for node, degree in graph.degree if degree == 3]
-        crosslinkers_d4 = [node for node, degree in graph.degree if degree == 4]
+        # Strands inside the component are kept, spliced at its linear units;
+        # the others lead to a dead end and become dangling.
+        kept, removed = [], []
+        for strand in raw.strands:
+            (kept if all(node in core for node in strand) else removed).append(strand)
+        refined_strands = _splice(kept, linear)
+        refined_danglings = raw.danglings + removed
+        logger.info(
+            "Load-bearing component: %d atoms, %d effective crosslinkers; %d strands, %d moved to the danglings",
+            len(core), len(functionality), len(refined_strands), len(removed),
+        )
 
-        # Step 1: crosslinkers (d3/d4) that sit on a primary loop, and
-        # crosslinkers (d3) that already carry a dangling chain.
-        lp_d4: list[int] = []
-        lp_d3: list[int] = []
-        for order, loop in zip(loop_orders, loop_nodes):
-            if order != 1:
-                continue
-            for node in loop:
-                degree = graph.degree(node)
-                if degree < 3:
-                    continue
-                (lp_d3 if degree == 3 else lp_d4).append(node)
-
-        dl_d3: list[int] = [
-            node for dangling in danglings for node in crosslinkers_d3 if node in dangling
+        refined_loop_orders = [
+            order if order == 1 else sum(1 for node in loop if node in functionality)
+            for order, loop in zip(raw.loop_orders, raw.loops)
         ]
 
-        for strand in strands:
-            for node in lp_d3:
-                if node in strand:
-                    if strand in refined_strands:
-                        refined_strands.remove(strand)
-                    refined_danglings.append(strand)
-                    if node == strand[0] and graph.degree(strand[-1]) == 3:
-                        dl_d3.append(strand[-1])
-                    elif node == strand[-1] and graph.degree(strand[0]) == 3:
-                        dl_d3.append(strand[0])
-
-        self._merge_strands_at(refined_strands, dl_d3)
-        logger.info("Step 1 completed")
-
-        # Step 2: crosslinkers (d4) that sit on a primary loop, or carry one
-        # or two dangling chains.
-        self._merge_strands_at(refined_strands, lp_d4)
-
-        dl_d4: list[int] = []
-        dl_d4_switch: list[int] = []
-        for node in crosslinkers_d4:
-            attached = sum(1 for dangling in danglings if node in dangling)
-            if attached == 2:
-                dl_d4.append(node)
-            if attached == 1:
-                dl_d4_switch.append(node)
-
-        self._merge_strands_at(refined_strands, dl_d4)
-        logger.info("Step 2 completed")
-
-        # Step 3: recompute loop order, excluding crosslinkers that were
-        # just reclassified as linear units (primary loops keep order 1).
-        wasted_crosslinkers = lp_d4 + lp_d3 + dl_d4 + dl_d3
-        refined_loop_orders: list[int] = []
-        for order, loop in zip(loop_orders, loop_nodes):
-            if order == 1:
-                refined_loop_orders.append(order)
-            else:
-                refined_loop_orders.append(
-                    order - sum(1 for node in loop if node in wasted_crosslinkers)
-                )
-        logger.info("Step 3 completed")
-
-        # Step 4: effective vs. total crosslinker counts.
-        all_crosslinker_d4 = len(crosslinkers_d4)
-        all_crosslinker_d3 = len(crosslinkers_d3)
-        effective_crosslinker_d4 = (
-            all_crosslinker_d4 - len(lp_d4) - len(dl_d4_switch) - len(dl_d4)
-        )
-        effective_crosslinker_d3 = (
-            all_crosslinker_d3 - len(lp_d3) - len(dl_d3) + len(dl_d4_switch)
-        )
-        correct_crosslinker_d4 = len(lp_d4) + len(dl_d4) + len(dl_d4_switch)
-        correct_crosslinker_d3 = len(lp_d3) + len(dl_d3) - len(dl_d4_switch)
-        logger.info("Step 4 completed")
+        degree_counts = Counter(degree for _, degree in graph.degree)
+        effective_counts = Counter(functionality.values())
+        all_d4, all_d3 = degree_counts[4], degree_counts[3]
+        effective_d4, effective_d3 = effective_counts[4], effective_counts[3]
 
         return ScanlanCaseResult(
             refined=RefinedStats(
                 strands=refined_strands,
                 danglings=refined_danglings,
-                loops=loop_nodes,
+                loops=raw.loops,
                 loop_orders=refined_loop_orders,
-                effective_crosslinker_d4=effective_crosslinker_d4,
-                effective_crosslinker_d3=effective_crosslinker_d3,
-                all_crosslinker_d4=all_crosslinker_d4,
-                all_crosslinker_d3=all_crosslinker_d3,
-                correct_crosslinker_d4=correct_crosslinker_d4,
-                correct_crosslinker_d3=correct_crosslinker_d3,
-                switched_crosslinker_d4=len(dl_d4_switch),
+                effective_crosslinker_d4=effective_d4,
+                effective_crosslinker_d3=effective_d3,
+                all_crosslinker_d4=all_d4,
+                all_crosslinker_d3=all_d3,
+                correct_crosslinker_d4=all_d4 - effective_d4,
+                correct_crosslinker_d3=all_d3 - effective_d3,
+                switched_crosslinker_d4=sum(
+                    1 for node, f in functionality.items() if f == 3 and graph.degree(node) == 4
+                ),
+                effective_functionality=functionality,
             ),
-            raw=self.raw,
+            raw=raw,
         )
 
-    @staticmethod
-    def _merge_strands_at(strands: list[Strand], nodes: list[int]) -> None:
-        """In place: splice together the (at most two) strands ending at each node."""
-        for node in nodes:
-            need_to_merge = []
-            for strand in list(strands):
-                if node == strand[0] or node == strand[-1]:
-                    strands.remove(strand)
-                    need_to_merge.append(strand)
-            if len(need_to_merge) == 2:
-                strands.append(merge_strands(node, *need_to_merge))
+
+def _splice(strands: list[Strand], linear: set[int]) -> list[Strand]:
+    """Join the strands that meet at each node of `linear` (exactly two do), lower end ID first."""
+    at_node: dict[int, list[int]] = defaultdict(list)
+    for index, strand in enumerate(strands):
+        for end in (strand[0], strand[-1]):
+            if end in linear:
+                at_node[end].append(index)
+
+    used = [False] * len(strands)
+    spliced: list[Strand] = []
+    for index, strand in enumerate(strands):
+        if used[index]:
+            continue
+        used[index] = True
+        path = list(strand)
+        for _ in range(2):  # extend the last end, then turn round and extend the other one
+            while path[-1] in linear:
+                node = path[-1]
+                following = next((i for i in at_node[node] if not used[i]), None)
+                if following is None:
+                    break
+                used[following] = True
+                path = merge_strands(node, path, strands[following])
+            path.reverse()
+        spliced.append(path if path[0] <= path[-1] else path[::-1])
+    return spliced

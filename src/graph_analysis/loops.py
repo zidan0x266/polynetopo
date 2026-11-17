@@ -8,8 +8,8 @@ The minimum cycle basis follows the order in which the edges are added: igraph
 chooses among equally short cycles by that order, while the vertex count
 (`n_vertices`, padded or inferred) does not affect the result. Both
 `LoopAnalyzer` constructors below build on the same `PolymerNetwork` parse
-and its stored `.edges`, in the topology file's line order - there is exactly
-one place in this package that turns a topology file into an edge list, and
+and its stored `.edges`, in the topology file's line order - the topology
+analyses read a topology file in exactly one place, `PolymerNetwork`, and
 both the `networkx` and `igraph` views are built from that same list object,
 so they share node identity and edge order.
 """
@@ -51,13 +51,13 @@ class LoopAnalyzer:
         """Build directly from a LAMMPS bond table.
 
         A convenience wrapper around `from_polymer_network`, for callers
-        (like the standalone `loops` CLI subcommand) that don't already have
-        a `PolymerNetwork` around. Parses the file through
-        `PolymerNetwork.from_lammps` - the same parser `networkx` uses
-        everywhere else in this package - rather than re-implementing its
-        own, so there is exactly one LAMMPS-bond-table reader in the whole
-        codebase and no way for its edge order to drift out of sync between
-        the `networkx` and `igraph` views of the same topology.
+        (like `--stage loops`) that don't already have a `PolymerNetwork`
+        around. Parses the file through `PolymerNetwork.from_lammps` - the
+        same parser the `networkx` view of the topology analyses uses -
+        rather than re-implementing its own, so there is no way for its edge
+        order to drift out of sync between the `networkx` and `igraph` views
+        of the same topology. (The spatial analyses read the coordinates and
+        the box as well, with `lammps.LammpsDataReader`.)
         """
         return cls.from_polymer_network(PolymerNetwork.from_lammps(path), n_vertices)
 
@@ -71,9 +71,17 @@ class LoopAnalyzer:
         `network.graph.edges()` (`networkx`'s own iteration order, which
         generally differs once a graph has any branching) - see the module
         docstring for why edge order, not vertex count, is what matters here.
+        Atom IDs are used as igraph vertex IDs, so `n_vertices` is the largest
+        atom ID (vertices 0..n_vertices are created), not the number of atoms.
         """
+        largest_id = max(network.graph.nodes())
         if n_vertices is None:
-            n_vertices = max(network.graph.nodes())
+            n_vertices = largest_id
+        elif n_vertices < largest_id:
+            raise ValueError(
+                f"n_vertices ({n_vertices}) is below the largest atom ID ({largest_id}); "
+                "it is the largest atom ID, not the number of atoms"
+            )
 
         graph = ig.Graph(directed=False)
         graph.add_vertices(n_vertices + 1)

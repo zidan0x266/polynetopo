@@ -23,9 +23,13 @@ For each period p = 1, 2, ..., M:
    atoms (and Case 2 mostly by the validity rule above). Case 3 is optional
    (`min_sp_only`): among the SPs of one atom, keep only the shortest.
 
-The search stops at the first p with no valid path, since larger p could only
-repeat shorter ones. The first (shortest) SP predicts where the first bond
-breaks and, through D^g_min / L0, the strain at which it breaks.
+The search stops at the first p with no valid path, as the reference does: in
+a cross-linked network, the paths at larger p then only repeat shorter ones.
+This is a stopping rule rather than a guarantee; a structure that winds through
+the box more than once before it closes, such as a single closed chain that
+wraps the box twice, has its first valid path at a larger p. The first
+(shortest) SP predicts where the first bond breaks and, through D^g_min / L0,
+the strain at which it breaks.
 
 Port notes - behaviour matches the reference implementation (the Jackson lab's
 shortest_path_thermoset code as run on the cluster, with `buffer_images`)
@@ -59,6 +63,7 @@ paper does this), or limit the sources with `slice_max`.
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import multiprocessing as mp
 import os
@@ -89,8 +94,9 @@ class ShortestPathConfig:
     p box lengths. `buffer_images` adds that many extra images on each side of
     the p + 1 so a path may wander outside them; 0 keeps every path inside.
     `slice_max` restricts the source atoms to those within that distance of the
-    box's low face along `direction` (None: every atom); it only reduces cost,
-    since a shortest path through the slice is a path through the box.
+    box's low face along `direction` (None: every atom); it reduces cost and
+    changes the set of paths, since only the SPs found from these atoms are
+    kept, so it is meant for quick trials.
     `remove_redundant` applies Cases 1 and 2; `min_sp_only` also applies the
     paper's optional Case 3 (only the shortest SP of each atom).
     """
@@ -137,7 +143,7 @@ class ShortestPathResult:
     max_period: int = 8
     buffer_images: int = 1
     min_sp_only: bool = False
-    source: Optional[Path] = None
+    source: Optional[str] = None
 
     @property
     def min_length(self) -> float:
@@ -164,7 +170,7 @@ class ShortestPathResult:
         output = Path(path).expanduser().resolve()
         if output.suffix != ".pkl":
             raise ValueError("Output filename must end in .pkl")
-        if self.source == output:
+        if self.source is not None and Path(self.source) == output:
             raise ValueError("Output file must not replace the input LAMMPS file")
         if not overwrite and output.exists():
             raise FileExistsError(f"Output already exists: {output}")
@@ -262,10 +268,16 @@ class PeriodicShortestPathAnalysis:
     # --- checkpointing: lets a long search resume after a crash, one period at a time ---
 
     def _checkpoint_params(self, slice_max: float) -> dict[str, object]:
-        """What makes saved paths valid for this run; max_period and the redundancy options are not
-        included, so a finished-early run can be extended and the Cases applied differently."""
+        """What makes saved paths valid for this run: the network itself (a digest of its atoms,
+        coordinates, bonds and box, so an edited input file is not mistaken for the old one) and the
+        search settings. max_period and the redundancy options are not included, so an interrupted run
+        can be resumed with a different max_period or Cases; the checkpoint is deleted once the search
+        completes."""
+        digest = hashlib.sha256()
+        for array in (self.network.atom_ids, self.network.coordinates, self.network.edges, self.network.box_bounds):
+            digest.update(np.ascontiguousarray(array).tobytes())
         return {
-            "source": str(self.network.source),
+            "network": digest.hexdigest(),
             "direction": int(self.config.direction),
             "buffer_images": self.config.buffer_images,
             "slice_max": slice_max,
@@ -420,6 +432,10 @@ def _atomic_pickle(obj: object, output: Path) -> None:
         with tempfile.NamedTemporaryFile(dir=output.parent, prefix=f".{output.name}.", delete=False) as stream:
             temporary = Path(stream.name)
             pickle.dump(obj, stream, protocol=pickle.HIGHEST_PROTOCOL)
+        # NamedTemporaryFile creates the file private (0600); give it the mode open() would.
+        umask = os.umask(0)
+        os.umask(umask)
+        os.chmod(temporary, 0o666 & ~umask)
         os.replace(temporary, output)
     except BaseException:
         if temporary is not None:
