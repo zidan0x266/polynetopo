@@ -313,13 +313,13 @@ If you use this code, please cite:
 > Zhang, Z.; Krajniak, J.; Dookhith, A. Z.; Tian, Y.; Sachar, H. S.; Marioni, N.;
 > Duncan, T. J.; Liu, J.; Sanoja, G. E.; Ganesan, V. Topology and Mechanical Properties
 > of Polymer Networks Formed under Free Radical and Atom Transfer Radical
-> Polymerizations. *Macromolecules* **2025**.
+> Polymerizations. *Macromolecules* **2025**, *58*, 3168-3187.
 > DOI: [10.1021/acs.macromol.4c03138](https://doi.org/10.1021/acs.macromol.4c03138)
 
 > Zhang, Z.; Krajniak, J.; Dookhith, A. Z.; Zhang, H.; Tian, Y.; Sachar, H. S.; Marioni,
 > N.; Duncan, T. J.; Liu, J.; Sanoja, G. E.; Ganesan, V. Fracture Behavior of
 > Monodisperse and Polydisperse Polymer Networks: Effects of Topology and
-> Strand-Length Dispersity. *Macromolecules* **2025**.
+> Strand-Length Dispersity. *Macromolecules* **2026**, *59*, 99-119.
 > DOI: [10.1021/acs.macromol.5c01715](https://doi.org/10.1021/acs.macromol.5c01715)
 
 > Zhang, Z.; Krajniak, J.; Tian, Y.; Wang, S.; Mukherjee, K.; Liu, J.; Chen, W.; Ganesan, V.
@@ -332,7 +332,7 @@ If you use the shortest paths (`--function shortest-path`), please also cite the
 implements:
 
 > Yu, Z.; Jackson, N. E. Shortest Paths Govern Bond Rupture in Thermoset Networks.
-> *Macromolecules* **2025**.
+> *Macromolecules* **2025**, *58*, 1728-1736.
 > DOI: [10.1021/acs.macromol.4c02438](https://doi.org/10.1021/acs.macromol.4c02438)
 
 If you use the weighted betweenness (`--function betweenness`), please also cite:
@@ -341,48 +341,6 @@ If you use the weighted betweenness (`--function betweenness`), please also cite
 > Betweenness Centrality for Predicting Fracture in End-Linked Polymer Networks.
 > *Macromolecules* **2026**, *59*, 10294-10303.
 > DOI: [10.1021/acs.macromol.6c00974](https://doi.org/10.1021/acs.macromol.6c00974)
-
-```bibtex
-@article{zhang2025topology,
-  title   = {Topology and Mechanical Properties of Polymer Networks Formed under Free Radical and Atom Transfer Radical Polymerizations},
-  author  = {Zhang, Zidan and Krajniak, Jakub and Dookhith, Aaliyah Z. and Tian, Yuan and Sachar, Harnoor S. and Marioni, Nico and Duncan, Tyler J. and Liu, Jun and Sanoja, Gabriel E. and Ganesan, Venkat},
-  journal = {Macromolecules},
-  year    = {2025},
-  doi     = {10.1021/acs.macromol.4c03138}
-}
-
-@article{zhang2025fracture,
-  title   = {Fracture Behavior of Monodisperse and Polydisperse Polymer Networks: Effects of Topology and Strand-Length Dispersity},
-  author  = {Zhang, Zidan and Krajniak, Jakub and Dookhith, Aaliyah Z. and Zhang, Han and Tian, Yuan and Sachar, Harnoor S. and Marioni, Nico and Duncan, Tyler J. and Liu, Jun and Sanoja, Gabriel E. and Ganesan, Venkat},
-  journal = {Macromolecules},
-  year    = {2025},
-  doi     = {10.1021/acs.macromol.5c01715}
-}
-
-@unpublished{zhang2026shortstrands,
-  title   = {Are Short Strands the Weak Links of Polymer Networks? Taut Paths and the Fracture Energy of Polydisperse Networks},
-  author  = {Zhang, Zidan and Krajniak, Jakub and Tian, Yuan and Wang, Siqi and Mukherjee, Krishnendu and Liu, Jun and Chen, Wei and Ganesan, Venkat},
-  note    = {In preparation}
-}
-
-@article{yu2025shortest,
-  title   = {Shortest Paths Govern Bond Rupture in Thermoset Networks},
-  author  = {Yu, Zheng and Jackson, Nicholas E.},
-  journal = {Macromolecules},
-  year    = {2025},
-  doi     = {10.1021/acs.macromol.4c02438}
-}
-
-@article{bai2026gebc,
-  title   = {Spatially Weighted Betweenness Centrality for Predicting Fracture in End-Linked Polymer Networks},
-  author  = {Bai, Xianjue and Ding, Zhaoyu and Qi, Shuanhu and Peng, Li and Huang, Xianbo and Yan, Dadong and Man, Xingkun},
-  journal = {Macromolecules},
-  year    = {2026},
-  volume  = {59},
-  pages   = {10294--10303},
-  doi     = {10.1021/acs.macromol.6c00974}
-}
-```
 
 ## License
 
