@@ -2,7 +2,7 @@
 
 Computes, for every bond of the network in `examples/data/atrp_s1_sys1_0.data`, the
 geodesic edge betweenness (GEBC) and its two spatially weighted variants, the
-orientation-weighted OBC and the distance-weighted DBC (Bai et al., Macromolecules 2026),
+orientation-weighted OBC and the distance-weighted DBC,
 for the loading axis x. All three come out of one pass.
 
 All commands run from the repository root. This function needs the in-house igraph build
@@ -96,7 +96,7 @@ pass through e, times a weight w_st:
 |---|---|
 | GEBC | 1 |
 | OBC | cos of the angle between the s-t displacement and the loading axis, \|dx\| / \|r\| |
-| DBC | the distance \|r\| between s and t (the paper divides by the box length L_x; the raw value here does not) |
+| DBC | the distance \|r\| between s and t (raw, not divided by the box length L_x) |
 
 Each unordered pair is counted once, shortest paths are unweighted (every bond counts 1),
 and the s-t displacement is the minimum image under the periodic box.

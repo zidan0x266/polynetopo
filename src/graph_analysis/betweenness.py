@@ -3,9 +3,7 @@
 Computes geodesic edge betweenness centrality (GEBC, the standard topological
 metric) alongside two spatially-weighted variants in a single pass: OBC
 (orientation-weighted, by alignment with a loading axis) and DBC
-(distance-weighted, by source-target separation) - per Bai, Ding, Qi, Peng,
-Huang, Yan & Man, "Spatially Weighted Betweenness Centrality for Predicting
-Fracture in End-Linked Polymer Networks" (Macromolecules, 2026).
+(distance-weighted, by source-target separation).
 
 Requires the in-house igraph build with `Graph.edge_betweenness_spatial` (see
 `vendor/README.md` at the repo root for how to build it) - the stock PyPI

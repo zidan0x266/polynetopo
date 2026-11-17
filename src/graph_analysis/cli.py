@@ -4,8 +4,8 @@ A single `--function` flag selects what to run:
 
     topology       strands, danglings, loops and their Scanlan-Case refinement
                     (--stage picks full/strands/danglings/loops/scanlan-case; default: full)
-    shortest-path  shortest paths across the periodic boundary (Yu & Jackson 2025),
-                    which govern where and when the first bond breaks
+    shortest-path  shortest paths across the periodic boundary, which govern where
+                    and when the first bond breaks
     betweenness    native spatially-weighted edge betweenness (GEBC/OBC/DBC)
     compare        print the entry counts of two pickled result files
 """
@@ -362,7 +362,7 @@ def build_parser() -> argparse.ArgumentParser:
     shortest_path = parser.add_argument_group("--function shortest-path")
     shortest_path.add_argument(
         "--max-period", type=int, default=8, metavar="M",
-        help="The paper's M: search periods p = 1..M, each wrapping p box lengths (default: 8)",
+        help="Search periods p = 1..M, each wrapping p box lengths (default: 8)",
     )
     shortest_path.add_argument(
         "--buffer-images", type=int, default=1,
@@ -379,7 +379,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     shortest_path.add_argument(
         "--min-sp-only", action="store_true",
-        help="Also apply the paper's optional Case 3: keep only the shortest SP of each start atom",
+        help="Keep only the shortest SP of each start atom (Case 3)",
     )
     shortest_path.add_argument(
         "--ncpus", type=int, default=None, help="Worker processes for the per-atom search (default: 1)"

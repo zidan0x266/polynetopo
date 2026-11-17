@@ -2,10 +2,6 @@
   <img src="logo/polynetopo_logo.png" alt="polynetopo" width="640">
 </p>
 
-<p align="center">
-  <a href="https://doi.org/10.5281/zenodo.24325718"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.24325718.svg" alt="DOI 10.5281/zenodo.24325718"></a>
-</p>
-
 # polynetopo
 
 Topology, shortest-path and spatial betweenness analysis for crosslinked polymer
@@ -27,7 +23,7 @@ networks, from a LAMMPS data file:
     </tr>
     <tr>
       <td nowrap><a href="#--function-shortest-path"><b><samp>shortest-path</samp></b></a></td>
-      <td>The shortest paths that wrap through the periodic box, which govern where and when the first bond breaks (Yu &amp; Jackson, 2025)</td>
+      <td>The shortest paths that wrap through the periodic box, which govern where and when the first bond breaks</td>
       <td nowrap><img alt="bonds" src="https://img.shields.io/badge/bonds-2f81f7"><br><img alt="coordinates" src="https://img.shields.io/badge/coordinates-2da44e"><br><img alt="box" src="https://img.shields.io/badge/box-8250df"></td>
     </tr>
     <tr>
@@ -39,11 +35,7 @@ networks, from a LAMMPS data file:
 </table>
 
 This code produced the analysis in the three papers listed first under
-[Citing this work](#citing-this-work). Its shortest-path analysis implements the method of
-Yu & Jackson in our own code, which gives the same paths as the authors' code
-([TheJacksonLab/shortest_path_thermoset](https://github.com/TheJacksonLab/shortest_path_thermoset)),
-and its betweenness analysis computes the spatially weighted betweenness of Bai et al.
-It is built on `networkx` and `igraph`; the betweenness analysis needs the in-house
+[Citing this work](#citing-this-work). It is built on `networkx` and `igraph`; the betweenness analysis needs the in-house
 `igraph` build in `vendor/`, which also runs every other function.
 
 ## What it does
@@ -91,9 +83,8 @@ python3 src/main.py --function topology --stage scanlan-case \
 
 ### `--function shortest-path`
 
-The method of Yu & Jackson, "Shortest Paths Govern Bond Rupture in Thermoset Networks".
 A shortest path (SP) that wraps through the periodic box can be longer than one image,
-so for each period p = 1, 2, ..., M (`--max-period`, the paper's M, default 8):
+so for each period p = 1, 2, ..., M (`--max-period`, default 8):
 
 1. **Multi-image graph.** p + 1 periodic images of the network along `--direction`
    (image 0 is the box as given), plus `--buffer-images` extra images on each side
@@ -106,12 +97,12 @@ so for each period p = 1, 2, ..., M (`--max-period`, the paper's M, default 8):
    comparable. A path is *valid* only if the start/end atom is the only atom it visits
    twice; any other path is discarded (it only repeats shorter ones).
 3. **Redundant paths** are removed when an already kept path of equal D^g contains all
-   of a path's atoms. This covers the paper's Case 1 (the same path found from
+   of a path's atoms. This covers Case 1 (the same path found from
    different start atoms) and, together with the validity rule, Case 2 (a path at larger
    p that repeats one at smaller p). `--keep-redundant` skips it.
 
 The search stops at the first period with no valid path. The smallest D^g is the first
-(shortest) SP; the paper uses it to predict where the first bond breaks and, through
+(shortest) SP; it predicts where the first bond breaks and, through
 D^g_min / L0, the strain at which it breaks.
 
 Optional **Case 3** (`--min-sp-only`): of the SPs starting at one atom, keep only the
@@ -333,8 +324,8 @@ If you use this code, please cite:
 The software itself (GitHub's "Cite this repository" gives this entry in APA and BibTeX):
 
 > Zhang, Z.; Krajniak, J.; Wang, S.; Ganesan, V. polynetopo: Topology, Shortest-Path and
-> Spatial Betweenness Analysis for Crosslinked Polymer Networks, version 0.4.0. Zenodo,
-> **2026**. DOI: [10.5281/zenodo.24325718](https://doi.org/10.5281/zenodo.24325718)
+> Spatial Betweenness Analysis for Crosslinked Polymer Networks, version 0.5.0, **2026**.
+> https://github.com/zidan0x266/polynetopo
 
 Optionally, depending on the functions you use:
 

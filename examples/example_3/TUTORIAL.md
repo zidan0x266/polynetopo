@@ -1,7 +1,7 @@
 # Example 3: shortest paths across the periodic boundary (`--function shortest-path`)
 
-The method of Yu & Jackson, "Shortest Paths Govern Bond Rupture in Thermoset Networks"
-(Macromolecules 2025), run on `examples/data/atrp_s1_sys1_0.data` along x. The README's
+The shortest paths across the periodic boundary of `examples/data/atrp_s1_sys1_0.data`,
+along x. The README's
 section on this function has the definitions; in short, for each period p = 1..M, every
 atom's shortest path to its own image p box lengths away is found on a graph of p + 1
 periodic images, and its length divided by p is the normalized length D^g (bonds per box
@@ -59,9 +59,7 @@ path. The log shows how many of the 103,149 atoms found a valid path at each per
 | 6 | 0 | 4 min 16 s |
 
 Removing redundant paths then leaves **3,321 paths**, and the summary is `"min_length": 155.0`,
-`"max_length": 419.0`, `"mean_length": 218.80`, `"median_length": 211.0`. The lengths and the
-paths are identical to those of the authors' code run on the same network with the same buffer
-image.
+`"max_length": 419.0`, `"mean_length": 218.80`, `"median_length": 211.0`.
 
 | | wall time | peak memory of the largest process |
 |---|---|---|
@@ -99,11 +97,10 @@ Expected: `3321 155.0`, then the smallest D^g per period
   give the same result.
 - `--buffer-images N` (default 1): extra images on each side of the p + 1, so a path can leave
   the stack between its ends. `0` keeps it inside, and the paths can differ.
-- `--min-sp-only`: also apply the paper's optional Case 3 and keep only the shortest path of
-  each start atom. The 3,321 paths here start from 2,526 different atoms, so this would keep
+- `--min-sp-only`: keep only the shortest path of each start atom (Case 3). The 3,321 paths here start from 2,526 different atoms, so this would keep
   2,526 of them, with the same minimum of 155.0. It is off by default, so an atom can have a path at
   several periods.
-- `--keep-redundant`: skip the removal of redundant paths (the paper's Cases 1 and 2).
+- `--keep-redundant`: skip the removal of redundant paths (Cases 1 and 2).
 - `--slice-max L`, `--ncpus N`, `--checkpoint-file F`: start paths from a thin slice, use
   worker processes, and save progress after each period so an interrupted run resumes (the
   checkpoint is deleted when the search completes).

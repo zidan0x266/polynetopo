@@ -6,7 +6,7 @@ abstract: >-
   polynetopo analyzes the topology of crosslinked polymer networks from a LAMMPS data
   file: the elastically effective strands, dangling chains and loops with the
   Scanlan-Case refinement of the crosslinker density, the shortest paths that wrap
-  through the periodic box (the method of Yu and Jackson), and the geodesic,
+  through the periodic box, and the geodesic,
   orientation-weighted and distance-weighted edge betweenness of every bond.
 authors:
   - given-names: Zidan
@@ -20,19 +20,12 @@ authors:
   - given-names: Siqi
     family-names: Wang
     affiliation: "McKetta Department of Chemical Engineering, University of Texas at Austin"
+    orcid: "https://orcid.org/0009-0001-0434-0024"
   - given-names: Venkat
     family-names: Ganesan
     affiliation: "McKetta Department of Chemical Engineering, University of Texas at Austin"
     orcid: "https://orcid.org/0000-0003-3899-5843"
-version: 0.4.0
-doi: 10.5281/zenodo.24325718
-identifiers:
-  - type: doi
-    value: 10.5281/zenodo.24325718
-    description: "All versions of polynetopo (Zenodo concept DOI)"
-  - type: doi
-    value: 10.5281/zenodo.24325719
-    description: "polynetopo 0.4.0"
+version: 0.5.0
 date-released: 2026-11-17
 license: GPL-3.0-or-later
 repository-code: "https://github.com/zidan0x266/polynetopo"

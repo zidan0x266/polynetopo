@@ -5,7 +5,7 @@ as the `polynetopo` command) covering the
 crosslinked-network analysis pipeline: elastically effective strands, dangling
 chains, primary/higher-order loops, Scanlan-Case crosslinker density refinement
 (used for the ATRP/FRP network papers), shortest paths across the periodic boundary
-(Yu & Jackson, which govern bond rupture), and native GEBC/OBC/DBC spatial edge
+(which govern bond rupture), and native GEBC/OBC/DBC spatial edge
 betweenness (used for the fracture-prediction paper).
 
 One flag, `--function {topology, shortest-path, betweenness, compare}` (default
@@ -27,11 +27,11 @@ example network `../examples/data/atrp_s1_sys1_0.data`.
 | `--raw` | topology | also write the pre-refinement result (`full`, `scanlan-case`) |
 | `--nvertices N` | topology | largest atom ID (not the number of atoms); inferred if omitted |
 | `--strands-file`, `--danglings-file`, `--loops-file` | topology `scanlan-case` | the three files it refines |
-| `--max-period M` | shortest-path | search periods p = 1..M (default 8, the paper's M) |
+| `--max-period M` | shortest-path | search periods p = 1..M (default 8) |
 | `--buffer-images N` | shortest-path | extra images on each side (default 1) |
 | `--slice-max L` | shortest-path | only start paths from atoms within L of the box's low face |
 | `--keep-redundant` | shortest-path | skip the removal of redundant paths (Cases 1 and 2) |
-| `--min-sp-only` | shortest-path | also apply the paper's optional Case 3 (only the shortest SP of each atom) |
+| `--min-sp-only` | shortest-path | keep only the shortest SP of each start atom (Case 3) |
 | `--ncpus N` | shortest-path | worker processes for the per-atom search (default 1) |
 | `--checkpoint-file F` | shortest-path | save progress after each period, resume if it exists |
 | `--validate-stock`, `--inspect`, `--sample-vertices N`, `--dbc-length L`, `--quiet` | betweenness | see below |
@@ -109,8 +109,6 @@ nested-list form `[[refined...], [raw...], [counts...]]`.
 
 ## `--function shortest-path`
 
-The method of Yu & Jackson, "Shortest Paths Govern Bond Rupture in Thermoset Networks"
-(Macromolecules 2025), in our own code, which gives the same paths as the authors' code.
 For each period p = 1..M it builds a graph of p + 1 periodic images (plus
 `--buffer-images` on each side), finds for every atom the shortest path from itself in
 image 0 to itself in image p, and records its

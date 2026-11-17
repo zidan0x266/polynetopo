@@ -1,9 +1,8 @@
 """Shortest paths across periodic boundaries, which govern bond rupture.
 
-Implements the method of Yu & Jackson, "Shortest Paths Govern Bond Rupture in
-Thermoset Networks" (Macromolecules, 2025), for a network under periodic
-boundary conditions (PBC). A shortest path (SP) that wraps through the box can
-be longer than one image, so the search runs on a series of multi-image graphs.
+For a network under periodic boundary conditions (PBC), a shortest path (SP)
+that wraps through the box can be longer than one image, so the search runs on
+a series of multi-image graphs.
 For each period p = 1, 2, ..., M:
 
 1. Build G_p from p + 1 periodic images of the network (image 0 is the box as
@@ -23,31 +22,25 @@ For each period p = 1, 2, ..., M:
    atoms (and Case 2 mostly by the validity rule above). Case 3 is optional
    (`min_sp_only`): among the SPs of one atom, keep only the shortest.
 
-The search stops at the first p with no valid path, as the reference does: in
-a cross-linked network, the paths at larger p then only repeat shorter ones.
+The search stops at the first p with no valid path: in a cross-linked network, the paths at larger p then only repeat shorter ones.
 This is a stopping rule rather than a guarantee; a structure that winds through
 the box more than once before it closes, such as a single closed chain that
 wraps the box twice, has its first valid path at a larger p. The first
 (shortest) SP predicts where the first bond breaks and, through D^g_min / L0,
 the strain at which it breaks.
 
-This module is our own code. It gives the same paths as the reference
-implementation (the Jackson lab's shortest_path_thermoset, with
-`buffer_images`), from which it differs as follows:
+Implementation notes:
 
 - Input comes from `lammps.LammpsDataReader`, so the box, coordinates and
   bonds are validated once, in one place, and atom IDs may be nonconsecutive.
   Paths are reported in *atom IDs* (raw LAMMPS IDs, like every other output of
-  this package), not zero-based indices, and images are counted from image 0
-  (the reference counts from the first buffer image).
-- A period is given as p, as in the paper (p = 1..M). The reference takes the
-  number of images n = p + 1 and tries `range(image_min, image_max)`.
+  this package), not zero-based indices, and images are counted from image 0.
 - A bond crosses the periodic boundary when its endpoints are more than half a
-  box length apart along the PBC axis, tested, as in the reference, on the
-  coordinates as written; LAMMPS `write_data` writes them wrapped into the box.
-- Each multi-image graph is built once, vectorized, in the reference's exact
-  edge order (tie-breaking between equally short paths depends on it), instead
-  of once per source atom in every worker.
+  box length apart along the PBC axis, tested on the coordinates as written;
+  LAMMPS `write_data` writes them wrapped into the box.
+- Each multi-image graph is built once, vectorized, with a fixed edge order
+  (igraph breaks ties between equally short paths by edge order), instead of
+  once per source atom in every worker.
 - A worker keeps only valid paths, so the parent never holds one path per atom.
 - Redundancy removal groups kept paths by D^g instead of scanning every kept
   path for every new one (quadratic in the number of paths).
@@ -57,8 +50,7 @@ implementation (the Jackson lab's shortest_path_thermoset, with
 Cost: one breadth-first search per source atom over a graph with p + 1 + 2 *
 `buffer_images` copies of the network, so cost grows as atoms x images x (atoms
 + bonds), and memory with the images and with p (a path has about D^g * p
-atoms). For a large all-atom network, reduce it to crosslinkers first (the
-paper does this), or limit the sources with `slice_max`.
+atoms). For a large all-atom network, reduce it to crosslinkers first, or limit the sources with `slice_max`.
 """
 
 from __future__ import annotations
@@ -90,15 +82,15 @@ FloatArray = np.ndarray
 class ShortestPathConfig:
     """Settings for a shortest-path search.
 
-    `max_period` is the paper's M: periods p = 1..M are searched, each wrapping
+    `max_period` is M: periods p = 1..M are searched, each wrapping
     p box lengths. `buffer_images` adds that many extra images on each side of
     the p + 1 so a path may wander outside them; 0 keeps every path inside.
     `slice_max` restricts the source atoms to those within that distance of the
     box's low face along `direction` (None: every atom); it reduces cost and
     changes the set of paths, since only the SPs found from these atoms are
     kept, so it is meant for quick trials.
-    `remove_redundant` applies Cases 1 and 2; `min_sp_only` also applies the
-    paper's optional Case 3 (only the shortest SP of each atom).
+    `remove_redundant` applies Cases 1 and 2; `min_sp_only` also applies
+    Case 3 (only the shortest SP of each atom).
     """
 
     direction: Direction | str | int = Direction.X
@@ -328,7 +320,7 @@ def _require_simple(network: LammpsNetwork) -> None:
 def _image_graph(edges: IntArray, along: FloatArray, n_atoms: int, box_length: float, n_images: int) -> ig.Graph:
     """The multi-image graph of `n_images` images: vertex (atom a, image i) is i * n_atoms + a.
 
-    Edges are added in the reference implementation's order - every in-image
+    Edges are added in a fixed order - every in-image
     bond (image by image), then for each pair of neighbouring images each
     boundary-crossing bond's forward edge followed by its reverse edge - because
     igraph breaks ties between equally short paths by edge order.
@@ -395,7 +387,7 @@ def _remove_redundant(lengths: list[float], paths: list[IntArray]) -> tuple[list
 
     That removes identical paths found from different start atoms (Case 1) and
     paths at larger p that only repeat one at smaller p (Case 2). Equal D^g is
-    exact float equality, as in the reference.
+    exact float equality.
     """
     kept_lengths: list[float] = []
     kept_paths: list[IntArray] = []
@@ -412,10 +404,9 @@ def _remove_redundant(lengths: list[float], paths: list[IntArray]) -> tuple[list
 
 
 def _keep_shortest_per_atom(lengths: list[float], paths: list[IntArray]) -> tuple[list[float], list[IntArray]]:
-    """Case 3 (optional in the paper): of the paths starting at one atom keep the shortest.
+    """Case 3 (optional): of the paths starting at one atom keep the shortest.
 
-    The first one wins a tie, and the result is ordered by start atom, as in the
-    reference's commented-out `get_SP_new`.
+    The first one wins a tie, and the result is ordered by start atom.
     """
     best: dict[int, int] = {}
     for index, (length, path) in enumerate(zip(lengths, paths)):
