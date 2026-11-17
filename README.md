@@ -3,11 +3,32 @@
 Topology, shortest-path and spatial betweenness analysis for crosslinked polymer
 networks, from a LAMMPS data file:
 
-| `--function` | What it computes | Needs |
-|---|---|---|
-| `topology` | elastically effective strands, dangling chains, primary/higher-order loops, and the Scanlan-Case crosslinker density refinement | bonds only |
-| `shortest-path` | the shortest paths that wrap through the periodic box, which govern where and when the first bond breaks (Yu & Jackson, 2025) | bonds, coordinates, box |
-| `betweenness` | native GEBC / OBC / DBC edge betweenness | bonds, coordinates, box |
+<table>
+  <thead>
+    <tr>
+      <th align="left"><code>--function</code></th>
+      <th align="left">What it computes</th>
+      <th align="left">Needs</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td nowrap><a href="#--function-topology"><b><samp>topology</samp></b></a></td>
+      <td>Elastically effective strands, dangling chains, primary/higher-order loops, and the Scanlan-Case crosslinker density refinement</td>
+      <td nowrap><img alt="bonds" src="https://img.shields.io/badge/bonds-2f81f7"></td>
+    </tr>
+    <tr>
+      <td nowrap><a href="#--function-shortest-path"><b><samp>shortest-path</samp></b></a></td>
+      <td>The shortest paths that wrap through the periodic box, which govern where and when the first bond breaks (Yu &amp; Jackson, 2025)</td>
+      <td nowrap><img alt="bonds" src="https://img.shields.io/badge/bonds-2f81f7"><br><img alt="coordinates" src="https://img.shields.io/badge/coordinates-2da44e"><br><img alt="box" src="https://img.shields.io/badge/box-8250df"></td>
+    </tr>
+    <tr>
+      <td nowrap><a href="#--function-betweenness"><b><samp>betweenness</samp></b></a></td>
+      <td>Native GEBC / OBC / DBC edge betweenness</td>
+      <td nowrap><img alt="bonds" src="https://img.shields.io/badge/bonds-2f81f7"><br><img alt="coordinates" src="https://img.shields.io/badge/coordinates-2da44e"><br><img alt="box" src="https://img.shields.io/badge/box-8250df"></td>
+    </tr>
+  </tbody>
+</table>
 
 This code produced the analysis in the three papers listed first under
 [Citing this work](#citing-this-work). Its shortest-path analysis implements the method of
