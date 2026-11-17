@@ -2,6 +2,10 @@
   <img src="logo/polynetopo_logo.png?raw=true" alt="polynetopo" width="640">
 </p>
 
+<p align="center">
+  <a href="https://doi.org/10.5281/zenodo.24325718"><img src="https://zenodo.org/badge/DOI/10.5281/zenodo.24325718.svg" alt="DOI 10.5281/zenodo.24325718"></a>
+</p>
+
 # polynetopo
 
 Topology, shortest-path and spatial betweenness analysis for crosslinked polymer
@@ -324,8 +328,8 @@ If you use this code, please cite:
 The software itself (GitHub's "Cite this repository" gives this entry in APA and BibTeX):
 
 > Zhang, Z.; Krajniak, J.; Wang, S.; Ganesan, V. polynetopo: Topology, Shortest-Path and
-> Spatial Betweenness Analysis for Crosslinked Polymer Networks, version 0.5.0, **2026**.
-> https://github.com/zidan0x266/polynetopo
+> Spatial Betweenness Analysis for Crosslinked Polymer Networks, version 0.5.0. Zenodo,
+> **2026**. DOI: [10.5281/zenodo.24325718](https://doi.org/10.5281/zenodo.24325718)
 
 Optionally, depending on the functions you use:
 
