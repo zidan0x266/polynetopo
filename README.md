@@ -46,7 +46,7 @@ This code produced the analysis in the three papers listed first under
 
 ### `--function topology`
 
-Given a network topology - a full LAMMPS data file by default, or a legacy bare bond
+Given a network topology - a LAMMPS data file by default, or a legacy bare bond
 table / RMC-style edge list (`--format bond-list` / `rmc`) - it identifies:
 
 - **Elastically effective strands** - the chains of degree-2 atoms between two
@@ -172,9 +172,9 @@ python3 src/main.py --function shortest-path --input-file examples/data/atrp_s1_
 python3 src/main.py --function betweenness  --input-file examples/data/atrp_s1_sys1_0.data --direction x --validate-stock
 ```
 
-`--input-file` is a full LAMMPS data file (`write_data` output). Topology reads only its
-Bonds section; shortest-path and betweenness also read the atom coordinates and the
-orthorhombic box. `python3 src/main.py --help` lists every option.
+`--input-file` is a LAMMPS data file (`write_data` output; atom style full, molecular, bond or
+angle). Topology reads only its Bonds section; shortest-path and betweenness also read the atom
+coordinates and the orthorhombic box. `python3 src/main.py --help` lists every option.
 
 As a library:
 
@@ -328,7 +328,7 @@ If you use this code, please cite:
 The software itself (GitHub's "Cite this repository" gives this entry in APA and BibTeX):
 
 > Zhang, Z.; Krajniak, J.; Wang, S.; Ganesan, V. polynetopo: Topology, Shortest-Path and
-> Spatial Betweenness Analysis for Crosslinked Polymer Networks, version 0.5.0. Zenodo,
+> Spatial Betweenness Analysis for Crosslinked Polymer Networks, version 0.5.1. Zenodo,
 > **2026**. DOI: [10.5281/zenodo.24325718](https://doi.org/10.5281/zenodo.24325718)
 
 Optionally, depending on the functions you use:

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "polynetopo"
-version = "0.5.0"
+version = "0.5.1"
 description = "Topology, shortest-path and spatial betweenness analysis for crosslinked polymer networks"
 readme = "README.md"
 license = "GPL-3.0-or-later"

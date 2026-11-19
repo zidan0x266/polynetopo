@@ -1,7 +1,8 @@
 """LAMMPS data input shared by the spatial analyses (betweenness, shortest paths).
 
-`LammpsDataReader` streams a full-style data file into a `LammpsNetwork` (atom IDs,
-coordinates, bonds, orthorhombic box) and validates it once, in one place. `Direction`
+`LammpsDataReader` streams a data file (atom style full, molecular, bond or angle) into a
+`LammpsNetwork` (atom IDs, coordinates, bonds, orthorhombic box) and validates it once, in one
+place. `Direction`
 is the axis that betweenness loads along and shortest paths wrap along.
 """
 
@@ -133,10 +134,16 @@ class LammpsFormatError(ValueError):
     """Invalid or unsupported LAMMPS data, with file/line context where possible."""
 
 
-class LammpsDataReader:
-    """Read ``Atoms # full`` and ``Bonds`` from a 3D orthorhombic data file.
+# Atom styles the reader accepts: the column of x in an Atoms row (id mol type [q] x y z [ix iy iz]).
+ATOM_STYLES = {"full": 4, "molecular": 3, "bond": 3, "angle": 3}
 
-    A bare ``Atoms`` header is interpreted as full style. Image flags are ignored
+
+class LammpsDataReader:
+    """Read ``Atoms`` and ``Bonds`` from a 3D orthorhombic data file.
+
+    The Atoms section may be of style full (``id mol type q x y z``), molecular, bond or angle
+    (``id mol type x y z``), each with optional image flags; a bare ``Atoms`` header is
+    interpreted as full style. Image flags are ignored
     because the native calculation uses minimum-image source-target distances.
     Atom IDs may be nonconsecutive. Unrelated numeric sections are skipped.
     """
@@ -146,6 +153,7 @@ class LammpsDataReader:
         counts: dict[str, int] = {}
         bounds: dict[str, tuple[float, float]] = {}
         atom_ids = coordinates = bonds = None
+        x_column = ATOM_STYLES["full"]
         nread_atoms = nread_bonds = 0
         section = None
         in_header = True
@@ -178,8 +186,10 @@ class LammpsDataReader:
                             if "atoms" not in counts or atom_ids is not None:
                                 raise ValueError("Missing atom count or repeated Atoms section")
                             style = comment.split()[0] if comment.split() else "full"
-                            if style != "full":
-                                raise ValueError(f"Unsupported atom style {style!r}; expected Atoms # full")
+                            if style not in ATOM_STYLES:
+                                raise ValueError(f"Unsupported atom style {style!r}; expected one of "
+                                                 f"{', '.join(ATOM_STYLES)}")
+                            x_column = ATOM_STYLES[style]
                             atom_ids = np.empty(counts["atoms"], dtype=np.int64)
                             coordinates = np.empty((counts["atoms"], 3), dtype=np.float64)
                         elif section == "Bonds":
@@ -188,10 +198,11 @@ class LammpsDataReader:
                             bonds = np.empty((counts.get("bonds", 0), 4), dtype=np.int64)
                         continue
                     if section == "Atoms":
-                        if len(fields) not in (7, 10) or nread_atoms >= len(atom_ids):
-                            raise ValueError("Expected exactly the declared number of full-style atom rows (7 or 10 columns)")
+                        if len(fields) not in (x_column + 3, x_column + 6) or nread_atoms >= len(atom_ids):
+                            raise ValueError(f"Expected exactly the declared number of atom rows ({x_column + 3} or "
+                                             f"{x_column + 6} columns for this atom style)")
                         atom_ids[nread_atoms] = int(fields[0])
-                        coordinates[nread_atoms] = [float(value) for value in fields[4:7]]
+                        coordinates[nread_atoms] = [float(value) for value in fields[x_column:x_column + 3]]
                         nread_atoms += 1
                     elif section == "Bonds":
                         if len(fields) != 4 or nread_bonds >= len(bonds):

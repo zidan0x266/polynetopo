@@ -171,7 +171,8 @@ build's own Python, not your regular environment's:
     --input-file ../examples/data/atrp_s1_sys1_0.data --direction x --validate-stock
 ```
 
-- `--input-file` is always a full LAMMPS data file (`Atoms # full` + `Bonds`).
+- `--input-file` is always a LAMMPS data file: an `Atoms` section of style full, molecular, bond or angle (with
+  or without image flags) and a `Bonds` section.
 - `--direction {x,y,z,0,1,2}` (default `x`): the loading axis OBC weights against.
 - `--validate-stock`: also runs stock `igraph.Graph.edge_betweenness()` and fails if
   native GEBC disagrees (`rtol=1e-12, atol=1e-8`) - good for a first run on new data,
